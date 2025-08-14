@@ -11,19 +11,31 @@ class HomeView extends StatelessWidget {
     final c = Get.find<HomeController>();
     return Scaffold(
       body: SafeArea(
-        child: Column(children: [
-          Expanded(flex: 3, child: Obx(() => c.cameraPreviewWidget())),
-          Expanded(
-            flex: 2,
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Obx(() => DogSprite(mood: c.currentMood.value)),
-              const SizedBox(height: 8),
-              Obx(() => MoodDisplay(breed: c.detectedBreed.value, mood: c.currentMood.value, confidence: c.confidence.value)),
-              const SizedBox(height: 8),
-              ElevatedButton(onPressed: c.saveDetection, child: const Text('Save Detection')),
-            ]),
-          )
-        ]),
+        child: Column(
+          children: [
+            Expanded(flex: 3, child: Obx(() => c.cameraPreviewWidget())),
+            Expanded(
+              flex: 2,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Obx(() => DogSprite(mood: c.currentMood.value)),
+                  const SizedBox(height: 8),
+                  Obx(() => MoodDisplay(
+                    breed: c.detectedBreed.value,
+                    mood: c.currentMood.value,
+                    confidence: c.confidence.value,
+                  )),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: c.saveDetection,
+                    child: const Text('Save Detection'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: 0,

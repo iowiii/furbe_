@@ -1,17 +1,17 @@
 plugins {
     id("com.android.application")
-    // START: FlutterFire Configuration
+    // FlutterFire Configuration
     id("com.google.gms.google-services")
-    // END: FlutterFire Configuration
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
 android {
-    namespace = "com.example.furbe"
-    compileSdk = 35 // This fixes the SDK version issue.
-    ndkVersion = "27.0.12077973" // This fixes the NDK version issue.
+    namespace = "com.example.furbe" // Your actual app package name
+    compileSdk = 36
+    ndkVersion = "27.0.12077973"
+    namespace = "com.tfliteflutter.tflite_flutter_plugin"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -19,24 +19,19 @@ android {
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_11.toString()
+        jvmTarget = "11"
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.example.furbe"
-        // You can update the following values to match your application needs.
-        // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
-        targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
-        versionName = flutter.versionName
+        minSdk = 24 // Some plugins require 21+, adjust if needed
+        targetSdk = 36
+        versionCode = 1
+        versionName = "1.0"
     }
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
             signingConfig = signingConfigs.getByName("debug")
         }
     }

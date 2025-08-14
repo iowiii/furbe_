@@ -2,7 +2,7 @@ import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/home_controller.dart';
 import '../controllers/save_controller.dart';
-import '../services/tflite_service.dart';
+import '../services/mlkit_service.dart';
 import '../services/storage_service.dart';
 import '../services/firebase_service.dart';
 
@@ -10,7 +10,7 @@ class AppBindings extends Bindings {
   @override
   void dependencies() {
     // services (singleton)
-    Get.put(TFLiteService(), permanent: true);
+    Get.put(MLKitService(), permanent: true);
     Get.put(StorageService(), permanent: true);
     Get.put(FirebaseService(), permanent: true);
 

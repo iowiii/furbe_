@@ -3,7 +3,7 @@ import 'package:get/get.dart';
 import 'core/app_routes.dart';
 import 'core/app_bindings.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart'; // generate with FlutterFire CLI
+import 'firebase_options.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
