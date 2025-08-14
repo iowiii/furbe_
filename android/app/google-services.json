@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "951916052078",
+    "project_id": "furbe-app",
+    "storage_bucket": "furbe-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:951916052078:android:d2a7ce7309cd6d1b15b07f",
+        "android_client_info": {
+          "package_name": "com.example.furbe"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBVj7TrKicZxBx9EugFatMi0KIDS3m7iUw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
