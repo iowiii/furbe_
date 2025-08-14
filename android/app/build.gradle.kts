@@ -8,10 +8,9 @@ plugins {
 }
 
 android {
-    namespace = "com.example.furbe" // Your actual app package name
+    namespace = "com.example.furbe"
     compileSdk = 36
     ndkVersion = "27.0.12077973"
-    namespace = "com.tfliteflutter.tflite_flutter_plugin"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
