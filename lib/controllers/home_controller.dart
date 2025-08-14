@@ -1,81 +1,81 @@
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
-import 'package:get/get.dart';
-import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../services/mlkit_service.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 
 class HomeController extends GetxController {
-  final MLKitService _mlKitService = MLKitService();
-  final RxString detectedBreed = ''.obs;
-  final RxString currentMood = ''.obs;
-  final RxDouble confidence = 0.0.obs;
+  final MLKitService mlKitService = MLKitService();
 
   CameraController? cameraController;
-  bool _isProcessing = false;
+  List<CameraDescription>? cameras;
+  RxBool isCameraInitialized = false.obs;
+  RxString resultText = "Initializing...".obs;
 
-  final List<Map<String, dynamic>> _savedDetections = [];
+  bool _isProcessing = false; // Prevents overlapping frame processing
 
   @override
   void onInit() {
     super.onInit();
-    _initializeCamera();
+    initCamera();
   }
 
-  Future<void> _initializeCamera() async {
-    final cameras = await availableCameras();
-    cameraController = CameraController(cameras.first, ResolutionPreset.medium);
-    await cameraController!.initialize();
+  /// Initializes the camera and starts live feed
+  Future<void> initCamera() async {
+    cameras = await availableCameras();
 
-    cameraController!.startImageStream((CameraImage image) async {
-      if (_isProcessing) return;
-      _isProcessing = true;
+    if (cameras != null && cameras!.isNotEmpty) {
+      cameraController = CameraController(
+        cameras!.first,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
 
-      final result = await _mlKitService.processImage(image);
-      if (result != null) {
-        detectedBreed.value = result["label"];
-        confidence.value = result["confidence"];
-        currentMood.value = _mapBreedToMood(result["label"]);
-      }
+      await cameraController!.initialize();
+      isCameraInitialized.value = true;
 
-      _isProcessing = false;
-    });
-
-    update();
-  }
-
-  String _mapBreedToMood(String breed) {
-    // You can customize mood mapping here
-    if (breed.toLowerCase().contains("happy")) return "Happy";
-    if (breed.toLowerCase().contains("sad")) return "Sad";
-    if (breed.toLowerCase().contains("angry")) return "Angry";
-    return "Neutral";
-  }
-
-  Widget cameraPreviewWidget() {
-    return cameraController != null && cameraController!.value.isInitialized
-        ? CameraPreview(cameraController!)
-        : const Center(child: CircularProgressIndicator());
-  }
-
-  void saveDetection() {
-    if (detectedBreed.value.isNotEmpty) {
-      _savedDetections.add({
-        "breed": detectedBreed.value,
-        "mood": currentMood.value,
-        "confidence": confidence.value,
-        "timestamp": DateTime.now().toIso8601String(),
+      // Start streaming camera frames to ML Kit
+      cameraController!.startImageStream((CameraImage image) {
+        if (!_isProcessing) {
+          _isProcessing = true;
+          processFrame(image).then((_) {
+            _isProcessing = false;
+          });
+        }
       });
-      Get.snackbar("Saved", "Detection saved successfully!");
+    } else {
+      resultText.value = "No camera found";
     }
   }
 
-  List<Map<String, dynamic>> get savedDetections => _savedDetections;
+  /// Processes each camera frame for mood detection
+  Future<void> processFrame(CameraImage cameraImage) async {
+    final rotation = InputImageRotationValue.fromRawValue(
+      cameras!.first.sensorOrientation,
+    ) ??
+        InputImageRotation.rotation0deg;
+
+    final labels =
+    await mlKitService.processCameraImage(cameraImage, rotation);
+
+    if (labels.isNotEmpty) {
+      // Pick the highest confidence label
+      final topLabel = labels.reduce(
+            (curr, next) =>
+        curr.confidence > next.confidence ? curr : next,
+      );
+      resultText.value =
+      "${topLabel.label} (${(topLabel.confidence * 100).toStringAsFixed(1)}%)";
+    } else {
+      resultText.value = "No mood detected";
+    }
+  }
 
   @override
   void onClose() {
+    cameraController?.stopImageStream();
     cameraController?.dispose();
-    _mlKitService.dispose();
+    mlKitService.dispose();
     super.onClose();
   }
 }
