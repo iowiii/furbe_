@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import '../controller/model_controller.dart';
@@ -26,31 +25,46 @@ class _HomeViewState extends State<HomeView> {
   void initState() {
     super.initState();
     _initializeCamera();
-    _modelController.loadModel();
   }
 
   Future<void> _initializeCamera() async {
-    final cameras = await availableCameras();
-    _cameraController = CameraController(cameras.first, ResolutionPreset.medium, enableAudio: false);
-    await _cameraController?.initialize();
-    if (mounted) setState(() => _isCameraInitialized = true);
+    try {
+      final cameras = await availableCameras();
+      _cameraController = CameraController(
+        cameras.first,
+        ResolutionPreset.medium,
+        enableAudio: false,
+      );
+      await _cameraController?.initialize();
 
-    Timer.periodic(const Duration(seconds: 2), (timer) async {
-      if (!mounted || !_isCameraInitialized || _isProcessing) return;
+      if (mounted) {
+        setState(() => _isCameraInitialized = true);
+      }
 
-      _isProcessing = true;
-      await _processImage();
-      _isProcessing = false;
-    });
+      // Auto-detect every 2 seconds
+      Timer.periodic(const Duration(seconds: 2), (timer) async {
+        if (!mounted || !_isCameraInitialized || _isProcessing) return;
+
+        _isProcessing = true;
+        await _processImage();
+        _isProcessing = false;
+      });
+    } catch (e) {
+      debugPrint("Camera init error: $e");
+    }
   }
 
   Future<void> _processImage() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+
     try {
       final file = await _cameraController!.takePicture();
       final bytes = await file.readAsBytes();
 
       final result = await _modelController.classify(bytes);
-      print('Classification result: $result');
+      debugPrint('Classification result: $result');
 
       if (result.isNotEmpty && result.contains('_')) {
         final parts = result.split('_');
@@ -66,19 +80,17 @@ class _HomeViewState extends State<HomeView> {
             });
             return;
           } catch (_) {
-            print('❗ GIF not found, fallback to nice.gif');
+            debugPrint('❗ GIF not found, fallback to nice.gif');
           }
         }
       }
 
       _fallbackToNiceGif();
-
     } catch (e) {
-      print('Classification error: $e');
+      debugPrint('Classification error: $e');
       _fallbackToNiceGif();
     }
   }
-
 
   void _fallbackToNiceGif() {
     setState(() {
@@ -91,10 +103,10 @@ class _HomeViewState extends State<HomeView> {
   @override
   void dispose() {
     _cameraController?.dispose();
+    _modelController.dispose();
     super.dispose();
   }
 
-  @override
   @override
   Widget build(BuildContext context) {
     const double cameraWidth = 350;
@@ -109,7 +121,7 @@ class _HomeViewState extends State<HomeView> {
       color: const Color(0xFFEAE0D1),
       child: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.only(top: cameraTopPadding),
+          padding: const EdgeInsets.only(top: cameraTopPadding),
           child: Column(
             children: [
               _isCameraInitialized
@@ -122,11 +134,11 @@ class _HomeViewState extends State<HomeView> {
                 ),
               )
                   : const CircularProgressIndicator(),
-              SizedBox(height: resultBoxSpacing),
+              const SizedBox(height: resultBoxSpacing),
 
               Container(
-                margin: EdgeInsets.symmetric(horizontal: resultBoxMargin),
-                padding: EdgeInsets.all(resultBoxPadding),
+                margin: const EdgeInsets.symmetric(horizontal: resultBoxMargin),
+                padding: const EdgeInsets.all(resultBoxPadding),
                 decoration: BoxDecoration(
                   color: const Color(0xFFFF914D),
                   borderRadius: BorderRadius.circular(16),
@@ -149,7 +161,8 @@ class _HomeViewState extends State<HomeView> {
                         children: [
                           Text(
                             "Dog Type: ${_breed.isEmpty ? 'NO DOG' : _breed.toUpperCase()}",
-                            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            style: const TextStyle(
+                                fontSize: 18, fontWeight: FontWeight.bold),
                           ),
                           const SizedBox(height: 4),
                           Text(

@@ -1,113 +1,46 @@
 import 'dart:io';
-import 'dart:typed_data';
-import 'package:flutter/services.dart';
-import 'package:image/image.dart' as img;
-import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:flutter/foundation.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 
 class MoodDetector {
-  late Interpreter _interpreter;
-  late List<String> _labels;
-  late List<int> _inputShape;
-  late List<int> _outputShape;
+  late final ImageLabeler _imageLabeler;
+  final double confidenceThreshold;
 
-  Future<void> loadModel() async {
+  MoodDetector({this.confidenceThreshold = 0.5}) {
+    _imageLabeler = ImageLabeler(
+      options: ImageLabelerOptions(confidenceThreshold: confidenceThreshold),
+    );
+  }
+
+  Future<Map<String, dynamic>> detectMood(File imageFile) async {
     try {
-      // Load model
-      _interpreter = await Interpreter.fromAsset('dog_mood_model.tflite');
+      final inputImage = InputImage.fromFile(imageFile);
+      final labels = await _imageLabeler.processImage(inputImage);
 
-      // Get input/output tensor shapes
-      _inputShape = _interpreter.getInputTensor(0).shape;
-      _outputShape = _interpreter.getOutputTensor(0).shape;
+      if (labels.isEmpty) {
+        return {
+          'mood': 'unknown',
+          'confidence': 0.0,
+        };
+      }
 
-      // Load labels
-      _labels = await _loadLabels('assets/labels.txt');
+      // Get the top label
+      final topLabel = labels.reduce((a, b) => a.confidence > b.confidence ? a : b);
+
+      return {
+        'mood': topLabel.label,
+        'confidence': topLabel.confidence,
+      };
     } catch (e) {
-      throw Exception('Failed to load model: $e');
+      debugPrint('Mood detection error: $e');
+      return {
+        'mood': 'error',
+        'confidence': 0.0,
+      };
     }
   }
 
-  Future<List<String>> _loadLabels(String assetPath) async {
-    final rawLabels = await rootBundle.loadString(assetPath);
-    return rawLabels
-        .split('\n')
-        .where((element) => element.isNotEmpty)
-        .toList();
-  }
-
-  /// Preprocess the image: resize and normalize to [0,1]
-  Float32List _preprocessImage(File imageFile) {
-    final imageBytes = imageFile.readAsBytesSync();
-    final image = img.decodeImage(imageBytes);
-
-    if (image == null) {
-      throw Exception("Failed to decode image");
-    }
-
-    final targetHeight = _inputShape[1];
-    final targetWidth = _inputShape[2];
-
-    // Resize
-    final resized = img.copyResize(image, width: targetWidth, height: targetHeight);
-
-    // Convert to Float32List
-    final inputBuffer = Float32List(targetHeight * targetWidth * 3);
-    int index = 0;
-
-    for (int y = 0; y < targetHeight; y++) {
-      for (int x = 0; x < targetWidth; x++) {
-        final pixel = resized.getPixel(x, y);
-        final r = img.getRed(pixel);
-        final g = img.getGreen(pixel);
-        final b = img.getBlue(pixel);
-
-        // Normalization to [0,1] — change to (-1,1) if your model expects it
-        inputBuffer[index++] = r / 255.0;
-        inputBuffer[index++] = g / 255.0;
-        inputBuffer[index++] = b / 255.0;
-      }
-    }
-
-    return inputBuffer;
-  }
-
-  Map<String, dynamic> detectMood(File imageFile) {
-    final input = _preprocessImage(imageFile)
-        .reshape([1, _inputShape[1], _inputShape[2], _inputShape[3]]);
-
-    // Prepare output buffer
-    final output = List.filled(_outputShape.reduce((a, b) => a * b), 0.0)
-        .reshape(_outputShape);
-
-    // Run inference
-    _interpreter.run(input, output);
-
-    // Flatten output to probabilities
-    final probs = List<double>.from(output[0]);
-
-    // Find max probability
-    int maxIndex = 0;
-    double maxProb = probs[0];
-    for (int i = 1; i < probs.length; i++) {
-      if (probs[i] > maxProb) {
-        maxProb = probs[i];
-        maxIndex = i;
-      }
-    }
-
-    return {
-      'mood': _labels[maxIndex],
-      'confidence': maxProb,
-    };
-  }
-}
-
-extension ListReshapeExt<T> on List<T> {
-  dynamic reshape(List<int> dims) {
-    if (dims.length == 1) return this;
-    int chunkSize = dims.sublist(1).reduce((a, b) => a * b);
-    return [
-      for (int i = 0; i < length; i += chunkSize)
-        sublist(i, i + chunkSize).reshape(dims.sublist(1))
-    ];
+  void dispose() {
+    _imageLabeler.close();
   }
 }

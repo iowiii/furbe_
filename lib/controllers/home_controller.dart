@@ -1,5 +1,4 @@
 import 'package:camera/camera.dart';
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/mlkit_service.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
