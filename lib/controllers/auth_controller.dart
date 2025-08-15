@@ -12,6 +12,15 @@ class AuthController extends GetxController {
     _auth.userChanges().listen((u) => user.value = u);
   }
 
+  // 🔹 Login using phone (starts OTP process)
+  Future<void> login(String phone, Function(String) onCodeSent) async {
+    if (phone.isEmpty) {
+      Get.snackbar('Login Error', 'Phone number cannot be empty');
+      return;
+    }
+    await sendOtp(phone, onCodeSent);
+  }
+
   Future<void> sendOtp(String phone, Function(String) onCodeSent) async {
     try {
       await _auth.verifyPhoneNumber(
@@ -34,7 +43,8 @@ class AuthController extends GetxController {
 
   Future<void> verifyOtp(String verificationId, String smsCode) async {
     try {
-      final cred = PhoneAuthProvider.credential(verificationId: verificationId, smsCode: smsCode);
+      final cred = PhoneAuthProvider.credential(
+          verificationId: verificationId, smsCode: smsCode);
       await _auth.signInWithCredential(cred);
     } catch (e) {
       rethrow;

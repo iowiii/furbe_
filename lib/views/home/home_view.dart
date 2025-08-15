@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:camera/camera.dart'; // ✅ Needed for CameraPreview
-
+import 'package:camera/camera.dart';
 import '../../controllers/home_controller.dart';
 import '../../widgets/dog_sprite.dart';
 import '../../widgets/mood_display.dart';

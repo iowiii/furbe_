@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import '../views/splash/splash_view.dart';
+import '../views/splash_view.dart';
 import '../views/auth/login_view.dart';
 import '../views/auth/register_view.dart';
 import '../views/home/home_view.dart';
@@ -8,6 +8,7 @@ import '../views/profile/profile_view.dart';
 import '../views/settings/settings_view.dart';
 import '../views/analysis/analysis_view.dart';
 import '../views/tips/tips_view.dart';
+import '../views/auth/otp_view.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -19,6 +20,7 @@ class AppRoutes {
   static const settings = '/settings';
   static const analysis = '/analysis';
   static const tips = '/tips';
+  static const otp = '/otp';
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashView()),
