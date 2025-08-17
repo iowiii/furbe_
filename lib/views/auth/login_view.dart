@@ -99,7 +99,7 @@ class _LoginViewState extends State<LoginView> {
                       phoneNumber: '+$rawPhone',
                       verificationCompleted: (PhoneAuthCredential credential) async {
                         await FirebaseAuth.instance.signInWithCredential(credential);
-                        Get.offAllNamed(AppRoutes.home);
+                        Get.offAllNamed(AppRoutes.main);
                       },
                       verificationFailed: (FirebaseAuthException e) {
                         Get.snackbar('Error', e.message ?? 'Verification failed');

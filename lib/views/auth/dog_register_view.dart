@@ -31,7 +31,7 @@ class DogRegisterViewState extends State<RegisterView> {
               onChanged: (v) => setState(() => gender = v ?? 'Male'),
             ),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: () => Get.offAllNamed(AppRoutes.home), child: const Text('Done')),
+            ElevatedButton(onPressed: () => Get.offAllNamed(AppRoutes.main), child: const Text('Done')),
           ]),
         ),
       ),

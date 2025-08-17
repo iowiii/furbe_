@@ -38,13 +38,13 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
         phone == AuthController.devPhone) {
       print("Dev login successful for $phone");
       auth.user.value = FirebaseAuth.instance.currentUser;
-      Get.offAllNamed(AppRoutes.home);
+      Get.offAllNamed(AppRoutes.main);
       return;
     }
 
     final success = await auth.verifyOtp(verificationId, otp);
     if (success) {
-      Get.offAllNamed(AppRoutes.home);
+      Get.offAllNamed(AppRoutes.main);
     } else {
       Get.snackbar('OTP Error', 'Verification failed');
     }
