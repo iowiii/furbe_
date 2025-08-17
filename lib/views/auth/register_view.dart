@@ -33,7 +33,6 @@ class _RegisterViewState extends State<RegisterView> {
               ),
               const SizedBox(height: 24),
 
-              // Name input
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
@@ -44,7 +43,6 @@ class _RegisterViewState extends State<RegisterView> {
 
               const SizedBox(height: 16),
 
-              // Phone input
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -56,7 +54,6 @@ class _RegisterViewState extends State<RegisterView> {
 
               const SizedBox(height: 32),
 
-              // Register button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -71,7 +68,6 @@ class _RegisterViewState extends State<RegisterView> {
                       return;
                     }
 
-                    // ✅ Normalize phone number
                     String formattedPhone = rawPhone.replaceAll('+', '');
                     if (!formattedPhone.startsWith('63')) {
                       formattedPhone = '63$formattedPhone';
@@ -80,7 +76,6 @@ class _RegisterViewState extends State<RegisterView> {
                     setState(() => isLoading = true);
 
                     try {
-                      // ✅ 1. Create the account in /accounts/{phone}
                       await authController.registerUser(
                         name,
                         rawPhone,
@@ -137,7 +132,6 @@ class _RegisterViewState extends State<RegisterView> {
                       ? const CircularProgressIndicator(color: Colors.white)
                       : const Text("Register"),
                 ),
-
               ),
             ],
           ),

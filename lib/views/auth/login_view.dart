@@ -72,25 +72,31 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   onPressed: () async {
-                    final phone = phoneCtrl.text.trim();
-                    if (phone.isEmpty) {
+                    final rawPhone = phoneCtrl.text.trim();
+                    if (rawPhone.isEmpty) {
                       Get.snackbar('Error', 'Phone number cannot be empty');
                       return;
                     }
 
-                    final authController = Get.find<AuthController>();
+                    String dbPhone = rawPhone.replaceAll('+', '');
+                    if (!dbPhone.startsWith('63')) dbPhone = '63$dbPhone';
 
-                    if (authController.devMode && phone == AuthController.devPhone) {
-                      print("Dev account found for $phone");
+                    final snapshot = await auth.firebaseService.db.child('accounts/$rawPhone').get();
+                    if (!snapshot.exists || snapshot.value == null) {
+                      Get.snackbar('Error', 'Phone number not registered');
+                      return;
+                    }
+
+                    if (auth.devMode && rawPhone == AuthController.devPhone) {
                       Get.toNamed(AppRoutes.otp, arguments: {
                         'verificationId': AuthController.devVerificationId,
-                        'phone': phone,
+                        'phone': rawPhone,
                       });
                       return;
                     }
 
                     FirebaseAuth.instance.verifyPhoneNumber(
-                      phoneNumber: phone,
+                      phoneNumber: '+$rawPhone',
                       verificationCompleted: (PhoneAuthCredential credential) async {
                         await FirebaseAuth.instance.signInWithCredential(credential);
                         Get.offAllNamed(AppRoutes.home);
@@ -103,15 +109,13 @@ class _LoginViewState extends State<LoginView> {
                           AppRoutes.otp,
                           arguments: {
                             'verificationId': verificationId,
-                            'phone': phone,
+                            'phone': dbPhone,
                           },
                         );
                       },
                       codeAutoRetrievalTimeout: (String verificationId) {},
                     );
-
                   },
-
                   child: const Text(
                     'Login',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),

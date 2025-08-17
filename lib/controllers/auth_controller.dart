@@ -31,6 +31,17 @@ class AuthController extends GetxController {
       return;
     }
 
+    String normalizedPhone = phone.replaceAll('+', '');
+    if (!normalizedPhone.startsWith('63')) {
+      normalizedPhone = '63$normalizedPhone';
+    }
+
+    final snapshot = await firebaseService.db.child('accounts/$phone').get();
+    if (!snapshot.exists || snapshot.value == null) {
+      Get.snackbar('Login Error', 'Phone number not registered');
+      return;
+    }
+
     currentPhone = phone;
 
     if (devMode && phone == devPhone) {
@@ -78,7 +89,6 @@ class AuthController extends GetxController {
       Function(String, int?) codeSentCallback,
       Function(String) verificationFailedCallback,
       ) async {
-    // Force format: ensure "63..." and remove "+"
     String formattedPhone = phone.startsWith('+')
         ? phone.replaceFirst('+', '')
         : phone;
@@ -88,7 +98,7 @@ class AuthController extends GetxController {
     }
 
     await _auth.verifyPhoneNumber(
-      phoneNumber: '+$formattedPhone', // Firebase still requires '+'
+      phoneNumber: '+$formattedPhone',
       timeout: const Duration(seconds: 60),
       verificationCompleted: (PhoneAuthCredential credential) async {
         await _auth.signInWithCredential(credential);
@@ -134,25 +144,36 @@ class AuthController extends GetxController {
         required Function(String verificationId, int? resendToken) onCodeSent,
         required Function(String errorMessage) onError,
       }) async {
-    // Normalize phone
+    bool exists = await isPhoneRegistered(phone);
+    if (exists) {
+      onError("Phone number already registered");
+      return;
+    }
+
     String normalizedPhone = phone.replaceAll('+', '');
     if (!normalizedPhone.startsWith('63')) {
       normalizedPhone = '63$normalizedPhone';
     }
 
-    // Save to /accounts/{phone}
     await firebaseService.db.child('accounts/$phone').set({
       'name': name,
       'phone': normalizedPhone,
+      'createdAt': DateTime.now().toIso8601String(),
     });
 
-    // Start phone verification
     await startPhoneVerification(
       phone,
       onCodeSent,
       onError,
     );
   }
+
+
+  Future<bool> isPhoneRegistered(String phone) async {
+    final snapshot = await firebaseService.db.child('accounts/$phone').get();
+    return snapshot.exists && snapshot.value != null;
+  }
+
 
   Future<void> logout() async {
     await _auth.signOut();
