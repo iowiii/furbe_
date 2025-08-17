@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
@@ -13,6 +12,7 @@ class LoginView extends StatefulWidget {
 
 class _LoginViewState extends State<LoginView> {
   final phoneCtrl = TextEditingController();
+  final passCtrl = TextEditingController();
   final auth = Get.find<AuthController>();
 
   @override
@@ -24,14 +24,8 @@ class _LoginViewState extends State<LoginView> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              Image.asset('assets/images/logo_main.png', height: 80),
               const SizedBox(height: 40),
-
-              Image.asset(
-                'assets/images/logo_main.png',
-                height: 80,
-              ),
-              const SizedBox(height: 40),
-
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -43,7 +37,7 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               const SizedBox(height: 16),
-
+              // Phone Input
               TextField(
                 controller: phoneCtrl,
                 keyboardType: TextInputType.phone,
@@ -55,12 +49,26 @@ class _LoginViewState extends State<LoginView> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding:
-                  const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+                ),
+              ),
+              const SizedBox(height: 16),
+              // Password Input
+              TextField(
+                controller: passCtrl,
+                obscureText: true,
+                decoration: InputDecoration(
+                  hintText: 'Password',
+                  filled: true,
+                  fillColor: Colors.grey[300],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    borderSide: BorderSide.none,
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                 ),
               ),
               const SizedBox(height: 24),
-
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -73,48 +81,31 @@ class _LoginViewState extends State<LoginView> {
                   ),
                   onPressed: () async {
                     final rawPhone = phoneCtrl.text.trim();
-                    if (rawPhone.isEmpty) {
-                      Get.snackbar('Error', 'Phone number cannot be empty');
+                    final password = passCtrl.text.trim();
+
+                    if (rawPhone.isEmpty || password.isEmpty) {
+                      Get.snackbar('Error', 'Phone number and password required');
                       return;
                     }
 
                     String dbPhone = rawPhone.replaceAll('+', '');
                     if (!dbPhone.startsWith('63')) dbPhone = '63$dbPhone';
 
-                    final snapshot = await auth.firebaseService.db.child('accounts/$rawPhone').get();
+                    final snapshot = await auth.firebaseService.db.child('accounts/$dbPhone').get();
                     if (!snapshot.exists || snapshot.value == null) {
                       Get.snackbar('Error', 'Phone number not registered');
                       return;
                     }
 
-                    if (auth.devMode && rawPhone == AuthController.devPhone) {
-                      Get.toNamed(AppRoutes.otp, arguments: {
-                        'verificationId': AuthController.devVerificationId,
-                        'phone': rawPhone,
-                      });
+                    final userMap = snapshot.value as Map;
+                    if (userMap['password'] != password) {
+                      Get.snackbar('Error', 'Incorrect password');
                       return;
                     }
 
-                    FirebaseAuth.instance.verifyPhoneNumber(
-                      phoneNumber: '+$rawPhone',
-                      verificationCompleted: (PhoneAuthCredential credential) async {
-                        await FirebaseAuth.instance.signInWithCredential(credential);
-                        Get.offAllNamed(AppRoutes.main);
-                      },
-                      verificationFailed: (FirebaseAuthException e) {
-                        Get.snackbar('Error', e.message ?? 'Verification failed');
-                      },
-                      codeSent: (String verificationId, int? resendToken) {
-                        Get.toNamed(
-                          AppRoutes.otp,
-                          arguments: {
-                            'verificationId': verificationId,
-                            'phone': dbPhone,
-                          },
-                        );
-                      },
-                      codeAutoRetrievalTimeout: (String verificationId) {},
-                    );
+                    // Password correct, load AppUser
+                    await auth.loadAppUser(dbPhone);
+                    Get.offAllNamed(AppRoutes.main);
                   },
                   child: const Text(
                     'Login',
@@ -123,7 +114,6 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               const SizedBox(height: 20),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

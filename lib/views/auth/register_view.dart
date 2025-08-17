@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
 import '../../core/app_routes.dart';
 
-
 class RegisterView extends StatefulWidget {
   const RegisterView({super.key});
 
@@ -14,6 +13,8 @@ class RegisterView extends StatefulWidget {
 class _RegisterViewState extends State<RegisterView> {
   final nameController = TextEditingController();
   final phoneController = TextEditingController();
+  final passController = TextEditingController();
+  final confirmPassController = TextEditingController();
   final authController = Get.find<AuthController>();
 
   bool isLoading = false;
@@ -33,6 +34,7 @@ class _RegisterViewState extends State<RegisterView> {
               ),
               const SizedBox(height: 24),
 
+              // Name
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
@@ -40,9 +42,9 @@ class _RegisterViewState extends State<RegisterView> {
                   border: OutlineInputBorder(),
                 ),
               ),
-
               const SizedBox(height: 16),
 
+              // Phone
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -51,9 +53,31 @@ class _RegisterViewState extends State<RegisterView> {
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 16),
 
+              // Password
+              TextField(
+                controller: passController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Confirm Password
+              TextField(
+                controller: confirmPassController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Confirm Password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
               const SizedBox(height: 32),
 
+              // Register Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -61,49 +85,33 @@ class _RegisterViewState extends State<RegisterView> {
                       ? null
                       : () async {
                     final name = nameController.text.trim();
-                    String rawPhone = phoneController.text.trim();
+                    final rawPhone = phoneController.text.trim();
+                    final password = passController.text.trim();
+                    final confirmPassword = confirmPassController.text.trim();
 
-                    if (name.isEmpty || rawPhone.isEmpty) {
+                    if (name.isEmpty || rawPhone.isEmpty || password.isEmpty || confirmPassword.isEmpty) {
                       Get.snackbar('Error', 'Please fill in all fields');
                       return;
                     }
 
-                    String formattedPhone = rawPhone.replaceAll('+', '');
-                    if (!formattedPhone.startsWith('63')) {
-                      formattedPhone = '63$formattedPhone';
+                    if (password != confirmPassword) {
+                      Get.snackbar('Error', 'Passwords do not match');
+                      return;
                     }
+
+                    String formattedPhone = rawPhone.replaceAll('+', '');
+                    if (!formattedPhone.startsWith('63')) formattedPhone = '63$formattedPhone';
 
                     setState(() => isLoading = true);
 
                     try {
                       await authController.registerUser(
                         name,
-                        rawPhone,
+                        formattedPhone,
+                        password,
                         onCodeSent: (verificationId, resendToken) {
                           if (!mounted) return;
                           Get.toNamed(
-                            AppRoutes.otp,
-                            arguments: {
-                              'verificationId': verificationId,
-                              'phone': rawPhone,
-                              'name': name,
-                            },
-                          );
-                        },
-                        onError: (errorMessage) {
-                          if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(errorMessage)),
-                          );
-                        },
-                      );
-
-                      await authController.startPhoneVerification(
-                        formattedPhone,
-                            (verificationId, resendToken) {
-                          if (!mounted) return;
-                          Navigator.pushNamed(
-                            context,
                             AppRoutes.otp,
                             arguments: {
                               'verificationId': verificationId,
@@ -112,18 +120,14 @@ class _RegisterViewState extends State<RegisterView> {
                             },
                           );
                         },
-                            (errorMessage) {
+                        onError: (errorMessage) {
                           if (!mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(errorMessage)),
-                          );
+                          Get.snackbar('Error', errorMessage);
                         },
                       );
                     } catch (e) {
                       if (!mounted) return;
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error: $e')),
-                      );
+                      Get.snackbar('Error', 'Registration failed: $e');
                     } finally {
                       setState(() => isLoading = false);
                     }
