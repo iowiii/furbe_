@@ -103,7 +103,6 @@ class _LoginViewState extends State<LoginView> {
                       return;
                     }
 
-                    // Password correct, load AppUser
                     await auth.loadAppUser(dbPhone);
                     Get.offAllNamed(AppRoutes.main);
                   },

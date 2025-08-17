@@ -107,7 +107,7 @@ class _RegisterViewState extends State<RegisterView> {
                     try {
                       await authController.registerUser(
                         name,
-                        formattedPhone,
+                        rawPhone,
                         password,
                         onCodeSent: (verificationId, resendToken) {
                           if (!mounted) return;
@@ -115,7 +115,7 @@ class _RegisterViewState extends State<RegisterView> {
                             AppRoutes.otp,
                             arguments: {
                               'verificationId': verificationId,
-                              'phone': formattedPhone,
+                              'phone': rawPhone,
                               'name': name,
                             },
                           );

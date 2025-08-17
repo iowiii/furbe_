@@ -151,7 +151,7 @@ class AuthController extends GetxController {
   Future<void> registerUser(
       String name,
       String phone,
-      String password, { // 👈 add password
+      String password, {
         required Function(String verificationId, int? resendToken) onCodeSent,
         required Function(String errorMessage) onError,
       }) async {
@@ -166,7 +166,7 @@ class AuthController extends GetxController {
       normalizedPhone = '63$normalizedPhone';
     }
 
-    await firebaseService.db.child('accounts/$normalizedPhone').set({
+    await firebaseService.db.child('accounts/$phone').set({
       'name': name,
       'phone': normalizedPhone,
       'password': password, // 👈 store it (better: hash it)
