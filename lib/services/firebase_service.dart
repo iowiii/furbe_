@@ -9,6 +9,15 @@ class FirebaseService {
 
   DatabaseReference get db => _db;
 
+  Future<void> registerUser(String uid, Map<String, dynamic> userData) async {
+    try {
+      await _db.child('accounts').child(uid).set(userData);
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+
   Future<void> pushMoodEntry(Map<String, dynamic> data) async {
     try {
       await _db.child('mood_entries').push().set(data);

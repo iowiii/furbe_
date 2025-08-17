@@ -1,11 +1,16 @@
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_routes.dart';
+import 'package:firebase_database/firebase_database.dart';
+import '../services/firebase_service.dart';
+
 
 class AuthController extends GetxController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseService firebaseService = FirebaseService();
 
   final Rxn<User> user = Rxn<User>();
+  final DatabaseReference db = FirebaseDatabase.instance.ref();
   bool devMode = true;
   String? currentPhone;
 
@@ -68,6 +73,36 @@ class AuthController extends GetxController {
     }
   }
 
+  Future<void> startPhoneVerification(
+      String phone,
+      Function(String, int?) codeSentCallback,
+      Function(String) verificationFailedCallback,
+      ) async {
+    // Force format: ensure "63..." and remove "+"
+    String formattedPhone = phone.startsWith('+')
+        ? phone.replaceFirst('+', '')
+        : phone;
+
+    if (!formattedPhone.startsWith('63')) {
+      formattedPhone = '63$formattedPhone';
+    }
+
+    await _auth.verifyPhoneNumber(
+      phoneNumber: '+$formattedPhone', // Firebase still requires '+'
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        await _auth.signInWithCredential(credential);
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        verificationFailedCallback(e.message ?? 'Verification failed');
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        codeSentCallback(verificationId, resendToken);
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {},
+    );
+  }
+
   Future<bool> verifyOtp(String verificationId, String smsCode) async {
     if (devMode && verificationId == devVerificationId && currentPhone == devPhone) {
       if (smsCode == devOtp) {
@@ -91,6 +126,32 @@ class AuthController extends GetxController {
       Get.snackbar('OTP Error', e.toString());
       return false;
     }
+  }
+
+  Future<void> registerUser(
+      String name,
+      String phone, {
+        required Function(String verificationId, int? resendToken) onCodeSent,
+        required Function(String errorMessage) onError,
+      }) async {
+    // Normalize phone
+    String normalizedPhone = phone.replaceAll('+', '');
+    if (!normalizedPhone.startsWith('63')) {
+      normalizedPhone = '63$normalizedPhone';
+    }
+
+    // Save to /accounts/{phone}
+    await firebaseService.db.child('accounts/$phone').set({
+      'name': name,
+      'phone': normalizedPhone,
+    });
+
+    // Start phone verification
+    await startPhoneVerification(
+      phone,
+      onCodeSent,
+      onError,
+    );
   }
 
   Future<void> logout() async {
