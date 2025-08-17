@@ -27,8 +27,7 @@ class AuthController extends GetxController {
     _auth.userChanges().listen((u) => user.value = u);
   }
 
-  /// LOGIN
-  Future<void> login(String phone) async {
+  Future<void> login(String phone, String? password) async {
     if (phone.isEmpty) {
       Get.snackbar('Login Error', 'Phone number cannot be empty');
       return;
@@ -39,88 +38,36 @@ class AuthController extends GetxController {
       normalizedPhone = '63$normalizedPhone';
     }
 
-    final snapshot = await firebaseService.db.child('accounts/$normalizedPhone').get();
+    final snapshot = await firebaseService.db.child('accounts/$phone').get();
     if (!snapshot.exists || snapshot.value == null) {
       Get.snackbar('Login Error', 'Phone number not registered');
       return;
     }
 
-    currentPhone = phone;
+    currentPhone = normalizedPhone;
 
-    // --- Dev Mode Login ---
     if (devMode && phone == devPhone) {
       print("Dev account detected: $phone");
       await loadAppUser(devPhone);
-
-      // Optionally sign in anonymously to have _auth.currentUser not null
-      await _auth.signInAnonymously();
-      user.value = _auth.currentUser;
-
+      user.value = null;
       Get.offAllNamed(AppRoutes.main);
       return;
     }
 
-    // --- Normal OTP Flow ---
-    try {
-      String formattedPhone = phone.startsWith('+') ? phone : '+63$phone';
+    if (password != null && password.isNotEmpty) {
+      final data = snapshot.value as Map;
+      if (data['password'] != password) {
+        Get.snackbar('Login Error', 'Incorrect password');
+        return;
+      }
 
-      await _auth.verifyPhoneNumber(
-        phoneNumber: formattedPhone,
-        verificationCompleted: (credential) async {
-          await _auth.signInWithCredential(credential);
-          await loadAppUser(currentPhone!);
-          Get.offAllNamed(AppRoutes.main);
-        },
-        verificationFailed: (e) {
-          Get.snackbar('OTP Error', e.message ?? 'Verification failed');
-        },
-        codeSent: (verificationId, resendToken) {
-          print("OTP sent: $verificationId");
-          Get.toNamed(
-            AppRoutes.otp,
-            arguments: {
-              'verificationId': verificationId,
-              'phone': formattedPhone,
-            },
-          );
-        },
-        codeAutoRetrievalTimeout: (verificationId) {},
-      );
-    } catch (e) {
-      Get.snackbar('Login Error', e.toString());
+      await loadAppUser(phone);
+      user.value = null;
+      Get.offAllNamed(AppRoutes.main);
+      return;
     }
   }
 
-  Future<void> loginWithPassword(String phone, String password) async {
-    String normalizedPhone = phone.replaceAll('+', '');
-    if (!normalizedPhone.startsWith('63')) {
-      normalizedPhone = '63$normalizedPhone';
-    }
-
-    final snapshot = await firebaseService.db.child('accounts/$normalizedPhone').get();
-    if (!snapshot.exists) {
-      Get.snackbar('Login Error', 'Phone number not registered');
-      return;
-    }
-
-    final data = snapshot.value as Map;
-    if (data['password'] != password) { // ⚠️ plain text, use hashing in prod
-      Get.snackbar('Login Error', 'Incorrect password');
-      return;
-    }
-
-    currentPhone = normalizedPhone;
-    await loadAppUser(normalizedPhone);
-
-    // (optional) still sign in with Firebase anonymously
-    await _auth.signInAnonymously();
-    user.value = _auth.currentUser;
-
-    Get.offAllNamed(AppRoutes.main);
-  }
-
-
-  /// OTP VERIFICATION
   Future<bool> verifyOtp(String verificationId, String smsCode) async {
     try {
       final cred = PhoneAuthProvider.credential(
@@ -133,8 +80,8 @@ class AuthController extends GetxController {
 
       if (firebaseUser != null && firebaseUser.phoneNumber != null) {
         final normalizedPhone = firebaseUser.phoneNumber!;
-        currentPhone = normalizedPhone; // 👈 save it for later use
-        await loadAppUser(normalizedPhone); // 👈 now this will run
+        currentPhone = normalizedPhone;
+        await loadAppUser(normalizedPhone);
       } else {
         print("⚠️ FirebaseUser or phoneNumber is null");
       }
@@ -146,8 +93,6 @@ class AuthController extends GetxController {
     }
   }
 
-
-  /// REGISTER
   Future<void> registerUser(
       String name,
       String phone,
@@ -169,41 +114,28 @@ class AuthController extends GetxController {
     await firebaseService.db.child('accounts/$phone').set({
       'name': name,
       'phone': normalizedPhone,
-      'password': password, // 👈 store it (better: hash it)
+      'password': password,
     });
 
-    // start OTP if you still want double protection
     await startPhoneVerification(phone, onCodeSent, onError);
   }
 
-
-  /// CHECK IF PHONE EXISTS
   Future<bool> isPhoneRegistered(String phone) async {
     final snapshot = await firebaseService.db.child('accounts/$phone').get();
     return snapshot.exists && snapshot.value != null;
   }
 
-  /// LOAD APP USER FROM DB
   Future<void> loadAppUser(String phone) async {
-    String dbKey = phone.startsWith('+') ? phone : '+$phone';
-    print("🔍 Loading AppUser from DB key: $dbKey");
-
     final snapshot = await firebaseService.db.child('accounts/$phone').get();
-    print("📦 Snapshot exists: ${snapshot.exists}, value: ${snapshot.value}");
 
     if (snapshot.exists && snapshot.value != null) {
       final userMap = snapshot.value as Map;
-      print("✅ AppUser map: $userMap");
       appUser.value = AppUser.fromMap(userMap);
-      print("🎉 AppUser loaded: name=${appUser.value?.name}, phone=${appUser.value?.phone}");
     } else {
-      print("⚠️ No user found in DB for $dbKey");
       appUser.value = null;
     }
   }
 
-
-  /// START PHONE VERIFICATION (FOR REGISTER)
   Future<void> startPhoneVerification(
       String phone,
       Function(String, int?) codeSentCallback,
@@ -233,7 +165,6 @@ class AuthController extends GetxController {
     );
   }
 
-  /// LOGOUT
   Future<void> logout() async {
     await _auth.signOut();
     user.value = null;
@@ -243,6 +174,5 @@ class AuthController extends GetxController {
     Get.offAllNamed(AppRoutes.login);
   }
 
-  /// GET CURRENT FIREBASE USER
   User? get currentUser => _auth.currentUser;
 }

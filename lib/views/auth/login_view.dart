@@ -88,10 +88,8 @@ class _LoginViewState extends State<LoginView> {
                       return;
                     }
 
-                    String dbPhone = rawPhone.replaceAll('+', '');
-                    if (!dbPhone.startsWith('63')) dbPhone = '63$dbPhone';
 
-                    final snapshot = await auth.firebaseService.db.child('accounts/$dbPhone').get();
+                    final snapshot = await auth.firebaseService.db.child('accounts/$rawPhone').get();
                     if (!snapshot.exists || snapshot.value == null) {
                       Get.snackbar('Error', 'Phone number not registered');
                       return;
@@ -103,7 +101,7 @@ class _LoginViewState extends State<LoginView> {
                       return;
                     }
 
-                    await auth.loadAppUser(dbPhone);
+                    await auth.login(rawPhone,password);
                     Get.offAllNamed(AppRoutes.main);
                   },
                   child: const Text(
