@@ -1,7 +1,13 @@
 import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class FirebaseService {
-  final DatabaseReference _db = FirebaseDatabase.instance.ref();
+  final DatabaseReference _db = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL: 'https://furbe-app-default-rtdb.asia-southeast1.firebasedatabase.app',
+  ).ref();
+
+  DatabaseReference get db => _db;
 
   Future<void> pushMoodEntry(Map<String, dynamic> data) async {
     try {

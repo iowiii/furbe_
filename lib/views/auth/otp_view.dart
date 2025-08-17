@@ -1,7 +1,9 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
 import '../../core/app_routes.dart';
+
 
 class OtpVerificationView extends StatefulWidget {
   const OtpVerificationView({super.key});
@@ -11,21 +13,40 @@ class OtpVerificationView extends StatefulWidget {
 }
 
 class _OtpVerificationViewState extends State<OtpVerificationView> {
-  final otpControllers = List.generate(4, (_) => TextEditingController());
-  String? verificationId;
+  final otpControllers = List.generate(6, (_) => TextEditingController());
   final auth = Get.find<AuthController>();
+  late String verificationId;
+  late String phone;
 
-  void submitOtp() async {
+  @override
+  void initState() {
+    super.initState();
+    final args = Get.arguments as Map<String, dynamic>;
+    verificationId = args['verificationId'];
+    phone = args['phone'];
+    print("Received verificationId: $verificationId, phone: $phone");
+  }
+
+  Future<void> submitOtp() async {
     String otp = otpControllers.map((c) => c.text).join();
-    if (otp.length < 4) {
-      Get.snackbar('Error', 'Please enter all 4 digits');
+    if (otp.length < 6) {
+      Get.snackbar('Error', 'Please enter all 6 digits');
       return;
     }
-    try {
-      await auth.verifyOtp(verificationId!, otp);
+
+    if (verificationId == AuthController.devVerificationId &&
+        phone == AuthController.devPhone) {
+      print("Dev login successful for $phone");
+      auth.user.value = FirebaseAuth.instance.currentUser;
       Get.offAllNamed(AppRoutes.home);
-    } catch (e) {
-      Get.snackbar('OTP Error', e.toString());
+      return;
+    }
+
+    final success = await auth.verifyOtp(verificationId, otp);
+    if (success) {
+      Get.offAllNamed(AppRoutes.home);
+    } else {
+      Get.snackbar('OTP Error', 'Verification failed');
     }
   }
 
@@ -44,15 +65,15 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Confirm your account by entering the one-time pin code we have sent you through your registered email address.',
+                'Confirm your account by entering the one-time pin code we have sent you.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: List.generate(4, (index) {
+                children: List.generate(6, (index) {
                   return SizedBox(
-                    width: 60,
+                    width: 50,
                     child: TextField(
                       controller: otpControllers[index],
                       keyboardType: TextInputType.number,
@@ -68,7 +89,7 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
                         ),
                       ),
                       onChanged: (value) {
-                        if (value.isNotEmpty && index < 3) {
+                        if (value.isNotEmpty && index < 5) {
                           FocusScope.of(context).nextFocus();
                         }
                       },

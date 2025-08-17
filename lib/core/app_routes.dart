@@ -32,5 +32,6 @@ class AppRoutes {
     GetPage(name: settings, page: () => const SettingsView()),
     GetPage(name: analysis, page: () => const AnalysisView()),
     GetPage(name: tips, page: () => const TipsView()),
+    GetPage(name: otp, page: () => const OtpVerificationView()),
   ];
 }

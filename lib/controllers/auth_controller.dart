@@ -1,10 +1,18 @@
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../core/app_routes.dart';
 
 class AuthController extends GetxController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final Rxn<User> user = Rxn<User>();
 
+  final Rxn<User> user = Rxn<User>();
+  bool devMode = true;
+  String? currentPhone;
+
+  static const String devPhone = "+631111111111";
+  static const String devOtp = "123456";
+  static const String devVerificationId = "631111111111";
+  //kevinigga sana kaso wag na pala, behave muna pala ako
   @override
   void onInit() {
     super.onInit();
@@ -12,47 +20,82 @@ class AuthController extends GetxController {
     _auth.userChanges().listen((u) => user.value = u);
   }
 
-  // 🔹 Login using phone (starts OTP process)
-  Future<void> login(String phone, Function(String) onCodeSent) async {
+  Future<void> login(String phone) async {
     if (phone.isEmpty) {
       Get.snackbar('Login Error', 'Phone number cannot be empty');
       return;
     }
-    await sendOtp(phone, onCodeSent);
-  }
 
-  Future<void> sendOtp(String phone, Function(String) onCodeSent) async {
+    currentPhone = phone;
+
+    if (devMode && phone == devPhone) {
+      print("Dev account detected: $phone");
+      Get.toNamed(
+        AppRoutes.otp,
+        arguments: {
+          'verificationId': devVerificationId,
+          'phone': phone,
+        },
+      );
+      return;
+    }
+
     try {
-      await _auth.verifyPhoneNumber(
-        phoneNumber: phone,
+      String formattedPhone = phone.startsWith('+') ? phone : '+63$phone';
+
+      await FirebaseAuth.instance.verifyPhoneNumber(
+        phoneNumber: formattedPhone,
         verificationCompleted: (credential) async {
-          await _auth.signInWithCredential(credential);
+          await FirebaseAuth.instance.signInWithCredential(credential);
         },
         verificationFailed: (e) {
           Get.snackbar('OTP Error', e.message ?? 'Verification failed');
         },
-        codeSent: (verificationId, _) {
-          onCodeSent(verificationId);
+        codeSent: (verificationId, resendToken) {
+          print("OTP sent: $verificationId");
+          Get.toNamed(
+            AppRoutes.otp,
+            arguments: {
+              'verificationId': verificationId,
+              'phone': formattedPhone,
+            },
+          );
         },
-        codeAutoRetrievalTimeout: (_) {},
+        codeAutoRetrievalTimeout: (verificationId) {},
       );
     } catch (e) {
-      Get.snackbar('OTP Error', e.toString());
+      Get.snackbar('Login Error', e.toString());
     }
   }
 
-  Future<void> verifyOtp(String verificationId, String smsCode) async {
+  Future<bool> verifyOtp(String verificationId, String smsCode) async {
+    if (devMode && verificationId == devVerificationId && currentPhone == devPhone) {
+      if (smsCode == devOtp) {
+        print("Dev login successful for $devPhone");
+        user.value = _auth.currentUser;
+        return true;
+      } else {
+        Get.snackbar('OTP Error', 'Invalid OTP for dev account');
+        return false;
+      }
+    }
+
     try {
       final cred = PhoneAuthProvider.credential(
-          verificationId: verificationId, smsCode: smsCode);
+        verificationId: verificationId,
+        smsCode: smsCode,
+      );
       await _auth.signInWithCredential(cred);
+      return true;
     } catch (e) {
-      rethrow;
+      Get.snackbar('OTP Error', e.toString());
+      return false;
     }
   }
 
   Future<void> logout() async {
     await _auth.signOut();
+    print("Logged out");
   }
 
   User? get currentUser => _auth.currentUser;

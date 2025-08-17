@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
@@ -25,14 +26,12 @@ class _LoginViewState extends State<LoginView> {
             children: [
               const SizedBox(height: 40),
 
-              // Logo
               Image.asset(
-                'assets/images/logo_main.png', // Change path to your actual logo asset
+                'assets/images/logo_main.png',
                 height: 80,
               ),
               const SizedBox(height: 40),
 
-              // Heading
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -45,7 +44,6 @@ class _LoginViewState extends State<LoginView> {
               ),
               const SizedBox(height: 16),
 
-              // Phone Number Field
               TextField(
                 controller: phoneCtrl,
                 keyboardType: TextInputType.phone,
@@ -63,7 +61,6 @@ class _LoginViewState extends State<LoginView> {
               ),
               const SizedBox(height: 24),
 
-              // Login Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -74,18 +71,47 @@ class _LoginViewState extends State<LoginView> {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  onPressed: () {
-                    auth.login(
-                      phoneCtrl.text.trim(),
-                          (verificationId) {
-                        // Navigate to OTP page
+                  onPressed: () async {
+                    final phone = phoneCtrl.text.trim();
+                    if (phone.isEmpty) {
+                      Get.snackbar('Error', 'Phone number cannot be empty');
+                      return;
+                    }
+
+                    final authController = Get.find<AuthController>();
+
+                    if (authController.devMode && phone == AuthController.devPhone) {
+                      print("Dev account found for $phone");
+                      Get.toNamed(AppRoutes.otp, arguments: {
+                        'verificationId': AuthController.devVerificationId,
+                        'phone': phone,
+                      });
+                      return;
+                    }
+
+                    FirebaseAuth.instance.verifyPhoneNumber(
+                      phoneNumber: phone,
+                      verificationCompleted: (PhoneAuthCredential credential) async {
+                        await FirebaseAuth.instance.signInWithCredential(credential);
+                        Get.offAllNamed(AppRoutes.home);
+                      },
+                      verificationFailed: (FirebaseAuthException e) {
+                        Get.snackbar('Error', e.message ?? 'Verification failed');
+                      },
+                      codeSent: (String verificationId, int? resendToken) {
                         Get.toNamed(
                           AppRoutes.otp,
-                          arguments: verificationId,
+                          arguments: {
+                            'verificationId': verificationId,
+                            'phone': phone,
+                          },
                         );
                       },
+                      codeAutoRetrievalTimeout: (String verificationId) {},
                     );
+
                   },
+
                   child: const Text(
                     'Login',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -94,7 +120,6 @@ class _LoginViewState extends State<LoginView> {
               ),
               const SizedBox(height: 20),
 
-              // Footer
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
