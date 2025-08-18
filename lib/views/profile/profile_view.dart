@@ -65,31 +65,6 @@ class _ProfileViewState extends State<ProfileView> {
         if (dogs.isEmpty) {
           return const Center(child: Text('No dogs added yet'));
         }
-        print('Dog photo URL: ${dog.photo}');
-        print('Dog photo URL: ${dog.photo}');
-
-        print('Dog photo URL: ${dog.photo}');
-
-        print('Dog photo URL: ${dog.photo}');
-
-        print('Dog photo URL: ${dog.photo}');
-
-        print('Dog photo URL: ${dog.photo}');
-        print('Exists? ${File(dog.photo).existsSync()}');
-
-        print('Exists? ${File(dog.photo).existsSync()}');
-
-        print('Exists? ${File(dog.photo).existsSync()}');
-
-        print('Exists? ${File(dog.photo).existsSync()}');
-
-        print('Exists? ${File(dog.photo).existsSync()}');
-
-        print('Exists? ${File(dog.photo).existsSync()}');
-
-
-
-
 
         return Padding(
           padding: const EdgeInsets.all(24),

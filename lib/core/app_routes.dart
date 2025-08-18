@@ -8,10 +8,11 @@ import '../views/settings/settings_view.dart';
 import '../views/auth/otp_view.dart';
 import '../views/onboarding/otp_verified_view.dart';
 import '../views/onboarding/onboarding_view.dart';
-import '../views/onboarding/dog_setup_name_view.dart';    // ✅ new
-import '../views/onboarding/dog_setup_gender_view.dart';  // ✅ new
-import '../views/onboarding/dog_setup_photo_view.dart';   // ✅ new
+import '../views/onboarding/dog_setup_name_view.dart';
+import '../views/onboarding/dog_setup_gender_view.dart';
+import '../views/onboarding/dog_setup_photo_view.dart';
 import '../views/main_view.dart';
+import '../views/settings/register_dogs_view.dart';
 
 class AppRoutes {
   static const splash = '/';
@@ -27,6 +28,7 @@ class AppRoutes {
   static const main = '/main';
   static const analysis = '/analysis';
   static const tips = '/tips';
+  static const registerDogs = '/register-dogs';
 
   static final routes = [
     GetPage(name: splash, page: () => const SplashView()),
@@ -42,5 +44,6 @@ class AppRoutes {
     GetPage(name: analysis, page: () => const AnalysisView()),
     GetPage(name: tips, page: () => const TipsView()),
     GetPage(name: settings, page: () => const SettingsView()),
+    GetPage(name: registerDogs, page: () => const RegisteredDogsView()),
   ];
 }

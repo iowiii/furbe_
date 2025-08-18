@@ -64,6 +64,7 @@ class AuthController extends GetxController {
         return;
       }
 
+      currentPhone = phone;
       await loadAppUser(phone);
       user.value = null;
       Get.offAllNamed(AppRoutes.main);
@@ -209,7 +210,11 @@ class AuthController extends GetxController {
     return user.dogs.values.toList();
   }
 
-
+  Future<void> deleteDog(String dogId) async {
+    if (currentPhone == null) return;
+    await firebaseService.deleteDog(currentPhone!, dogId, {});
+    await loadAppUser(currentPhone!);
+  }
 
   Future<void> logout() async {
     await _auth.signOut();

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
+import '../../core/app_routes.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -10,7 +11,12 @@ class SettingsView extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: ListView(padding: const EdgeInsets.all(12), children: [
-        ListTile(title: const Text('Registered Dogs'), onTap: () {}),
+        ListTile(
+          title: const Text('Registered Dogs'),
+          onTap: () {
+            Get.toNamed(AppRoutes.registerDogs);
+          },
+        ),
         ListTile(title: const Text('Data Privacy'), onTap: () {}),
         ListTile(title: const Text('Delete Account'), onTap: () {}),
         ListTile(title: const Text('Logout'), onTap: () => auth.logout()),
