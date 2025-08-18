@@ -4,7 +4,7 @@ import '../controllers/main_controller.dart';
 import 'home/home_view.dart';
 import 'save/save_view.dart';
 import 'profile/profile_view.dart';
-import 'settings/settings_view.dart';
+import 'tips/tips_view.dart';
 import '../widgets/bottom_nav_bar.dart';
 
 class MainView extends StatelessWidget {
@@ -16,8 +16,8 @@ class MainView extends StatelessWidget {
     final pages = [
       const HomeView(),
       const SaveView(),
+      const TipsView(),
       const ProfileView(),
-      const SettingsView(),
     ];
 
     return Scaffold(

@@ -1,5 +1,5 @@
 import 'dart:io';
-
+import 'dart:convert';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -46,14 +46,32 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
   }
 
   Future<void> _finishSetup() async {
-    await auth.addDog(
-      name: widget.dogName,
-      gender: widget.dogGender,
-      type: 'unknown',
-      info: '',
-      photo: _dogImage?.path ?? '', // save path or convert to base64 if needed
-    );
-    Get.offAllNamed(AppRoutes.main);
+    if (_dogImage == null) {
+      Get.snackbar('Error', 'Please select a dog image');
+      return;
+    }
+
+    try {
+      final bytes = await File(_dogImage!.path).readAsBytes();
+      final base64Image = base64Encode(bytes);
+
+      await auth.addDog(
+        name: widget.dogName,
+        gender: widget.dogGender,
+        type: 'unknown',
+        info: '',
+        photoPath: _dogImage?.path ?? '',
+      );
+
+
+      if (auth.currentPhone != null) {
+        await auth.loadAppUser(auth.currentPhone!);
+      }
+
+      Get.offAllNamed(AppRoutes.main);
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to add dog: $e');
+    }
   }
 
   @override
@@ -71,7 +89,6 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
             const Text('Upload your dog\'s profile picture', style: TextStyle(fontSize: 20)),
             const SizedBox(height: 32),
 
-            // Image preview
             if (_dogImage != null)
               Stack(
                 alignment: Alignment.topRight,

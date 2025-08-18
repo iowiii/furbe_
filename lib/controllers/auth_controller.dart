@@ -1,10 +1,13 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_routes.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../services/firebase_service.dart';
 import '../models/app_user.dart';
-import '../models/dog.dart';
+import '../models/dog.dart' as dog_model;
 import 'package:uuid/uuid.dart';
 
 class AuthController extends GetxController {
@@ -73,24 +76,31 @@ class AuthController extends GetxController {
     required String gender,
     required String type,
     required String info,
-    required String photo, // local path or URL
+    required String photoPath,
   }) async {
     if (currentPhone == null) {
       Get.snackbar('Error', 'User not logged in');
       return;
     }
 
-    final dogId = const Uuid().v4(); // generate a unique ID
+    final dogId = const Uuid().v4();
+
+    String photoBase64 = '';
+    if (photoPath.isNotEmpty) {
+      final file = File(photoPath);
+      final bytes = await file.readAsBytes();
+      photoBase64 = base64Encode(bytes);
+    }
+
     final dogJson = {
       'id': dogId,
       'name': name,
       'gender': gender,
       'type': type,
       'info': info,
-      'photo': photo,
+      'photo': photoBase64,
     };
 
-    // Save under /accounts/<phone>/dogs/<dogId>
     await firebaseService.setUserDog(currentPhone!, dogId, dogJson);
   }
 
@@ -141,8 +151,8 @@ class AuthController extends GetxController {
       'name': name,
       'phone': normalizedPhone,
       'password': password,
-      'saves': {},   // initialize empty saves
-      'dogs': {},    // initialize empty dogs
+      'saves': {},
+      'dogs': {},
     });
 
     await startPhoneVerification(phone, onCodeSent, onError);
@@ -192,6 +202,14 @@ class AuthController extends GetxController {
       codeAutoRetrievalTimeout: (String verificationId) {},
     );
   }
+
+  List<dog_model.Dog> get userDogs {
+    final user = appUser.value;
+    if (user == null || user.dogs.isEmpty) return [];
+    return user.dogs.values.toList();
+  }
+
+
 
   Future<void> logout() async {
     await _auth.signOut();

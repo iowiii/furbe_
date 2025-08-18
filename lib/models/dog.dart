@@ -1,13 +1,13 @@
 class Dog {
-  String? id;       // unique Firebase key for this dog
-  String name;
-  String gender;    // "male" or "female"
-  String type;      // e.g., "pomeranian", "shih-tzu", etc.
-  String info;      // description or notes
-  String photo;     // URL or base64 string
+  final String id;
+  final String name;
+  final String gender;
+  final String type;
+  final String info;
+  final String photo;
 
   Dog({
-    this.id,
+    required this.id,
     required this.name,
     required this.gender,
     required this.type,
@@ -15,8 +15,7 @@ class Dog {
     required this.photo,
   });
 
-  /// Convert Firebase snapshot map to Dog object
-  factory Dog.fromMap(String id, Map<dynamic, dynamic> map) {
+  factory Dog.fromMap(String id, Map<String, dynamic> map) {
     return Dog(
       id: id,
       name: map['name'] ?? '',
@@ -27,7 +26,7 @@ class Dog {
     );
   }
 
-  /// Convert Dog object to map for saving to Firebase
+
   Map<String, dynamic> toMap() {
     return {
       'name': name,

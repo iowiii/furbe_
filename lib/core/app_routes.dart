@@ -4,6 +4,7 @@ import '../views/auth/login_view.dart';
 import '../views/auth/register_view.dart';
 import '../views/analysis/analysis_view.dart';
 import '../views/tips/tips_view.dart';
+import '../views/settings/settings_view.dart';
 import '../views/auth/otp_view.dart';
 import '../views/onboarding/otp_verified_view.dart';
 import '../views/onboarding/onboarding_view.dart';
@@ -19,9 +20,10 @@ class AppRoutes {
   static const otp = '/otp';
   static const otpVerified = '/otp-verified';
   static const onboarding = '/onboarding';
-  static const dogSetupName = '/dog-setup-name';         // ✅ new
-  static const dogSetupGender = '/dog-setup-gender';     // ✅ new
-  static const dogSetupPhoto = '/dog-setup-photo';       // ✅ new
+  static const dogSetupName = '/dog-setup-name';
+  static const dogSetupGender = '/dog-setup-gender';
+  static const dogSetupPhoto = '/dog-setup-photo';
+  static const settings = '/settings';
   static const main = '/main';
   static const analysis = '/analysis';
   static const tips = '/tips';
@@ -33,11 +35,12 @@ class AppRoutes {
     GetPage(name: otp, page: () => const OtpVerificationView()),
     GetPage(name: otpVerified, page: () => const OtpVerifiedView()),
     GetPage(name: onboarding, page: () => const OnboardingView()),
-    GetPage(name: dogSetupName, page: () => const DogSetupNameView()),       // ✅
-    GetPage(name: dogSetupGender, page: () => const DogSetupGenderView(dogName: '')), // placeholder
-    GetPage(name: dogSetupPhoto, page: () => const DogSetupPhotoView(dogName: '', dogGender: '')), // placeholder
+    GetPage(name: dogSetupName, page: () => const DogSetupNameView()),
+    GetPage(name: dogSetupGender, page: () => const DogSetupGenderView(dogName: '')),
+    GetPage(name: dogSetupPhoto, page: () => const DogSetupPhotoView(dogName: '', dogGender: '')),
     GetPage(name: main, page: () => const MainView()),
     GetPage(name: analysis, page: () => const AnalysisView()),
     GetPage(name: tips, page: () => const TipsView()),
+    GetPage(name: settings, page: () => const SettingsView()),
   ];
 }
