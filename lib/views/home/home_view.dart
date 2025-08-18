@@ -9,7 +9,6 @@ class HomeView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = Get.find<HomeController>();
-
     return Scaffold(
       appBar: AppBar(
         toolbarHeight: 80.0,
@@ -65,7 +64,7 @@ class HomeView extends StatelessWidget {
             // Space between buttons
             const SizedBox(height: 130),
 
-            // Quick Scan button but still using the startScan button
+            // Quick Scan button but still using the startScan button so this needed to be change
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE15C31),
