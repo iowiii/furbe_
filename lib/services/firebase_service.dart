@@ -26,11 +26,12 @@ class FirebaseService {
     }
   }
 
-  Future<void> setUserDog(String uid, Map<String, dynamic> dogJson) async {
-    await _db.child('users').child(uid).child('dogs').child(dogJson['id']).set(dogJson);
+  Future<void> setUserDog(String phone, String dogId, Map<String, dynamic> dogJson) async {
+    await _db.child('accounts').child(phone).child('dogs').child(dogId).set(dogJson);
   }
 
-  Future<void> deleteDog(String uid, String dogId) async {
-    await _db.child('users').child(uid).child('dogs').child(dogId).remove();
+
+  Future<void> deleteDog(String phone, String dogId, Map<String, dynamic> dogJson) async {
+    await _db.child('accounts').child(phone).child('dogs').child(dogId).remove();
   }
 }

@@ -11,9 +11,9 @@ class AppUser {
 
   factory AppUser.fromMap(Map data) {
     return AppUser(
-      name: data['name'] ?? '',
-      phone: data['phone'] ?? '',
-      password: data['password'],
+      name: data['name']?.toString() ?? '',
+      phone: data['phone']?.toString() ?? '',
+      password: data['password']?.toString() ?? '',
     );
   }
 

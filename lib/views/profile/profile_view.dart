@@ -32,7 +32,6 @@ class ProfileView extends StatelessWidget {
               const CircleAvatar(radius: 48, child: Icon(Icons.pets, size: 48)),
               const SizedBox(height: 8),
               Text(user.name),
-              Text(user.phone),
               const SizedBox(height: 12),
               ElevatedButton(
                 onPressed: () async {

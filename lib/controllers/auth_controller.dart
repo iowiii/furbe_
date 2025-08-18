@@ -4,6 +4,8 @@ import '../core/app_routes.dart';
 import 'package:firebase_database/firebase_database.dart';
 import '../services/firebase_service.dart';
 import '../models/app_user.dart';
+import '../models/dog.dart';
+import 'package:uuid/uuid.dart';
 
 class AuthController extends GetxController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -44,8 +46,6 @@ class AuthController extends GetxController {
       return;
     }
 
-    currentPhone = normalizedPhone;
-
     if (devMode && phone == devPhone) {
       print("Dev account detected: $phone");
       await loadAppUser(devPhone);
@@ -66,6 +66,32 @@ class AuthController extends GetxController {
       Get.offAllNamed(AppRoutes.main);
       return;
     }
+  }
+
+  Future<void> addDog({
+    required String name,
+    required String gender,
+    required String type,
+    required String info,
+    required String photo, // local path or URL
+  }) async {
+    if (currentPhone == null) {
+      Get.snackbar('Error', 'User not logged in');
+      return;
+    }
+
+    final dogId = const Uuid().v4(); // generate a unique ID
+    final dogJson = {
+      'id': dogId,
+      'name': name,
+      'gender': gender,
+      'type': type,
+      'info': info,
+      'photo': photo,
+    };
+
+    // Save under /accounts/<phone>/dogs/<dogId>
+    await firebaseService.setUserDog(currentPhone!, dogId, dogJson);
   }
 
   Future<bool> verifyOtp(String verificationId, String smsCode) async {
@@ -115,6 +141,8 @@ class AuthController extends GetxController {
       'name': name,
       'phone': normalizedPhone,
       'password': password,
+      'saves': {},   // initialize empty saves
+      'dogs': {},    // initialize empty dogs
     });
 
     await startPhoneVerification(phone, onCodeSent, onError);
