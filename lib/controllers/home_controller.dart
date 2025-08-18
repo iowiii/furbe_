@@ -9,15 +9,9 @@ class HomeController extends GetxController {
   CameraController? cameraController;
   List<CameraDescription>? cameras;
   RxBool isCameraInitialized = false.obs;
-  RxString resultText = "Initializing...".obs;
+  RxString resultText = "".obs;
 
   bool _isProcessing = false; // Prevents overlapping frame processing
-
-  @override
-  void onInit() {
-    super.onInit();
-    initCamera();
-  }
 
   /// Initializes the camera and starts live feed
   Future<void> initCamera() async {
@@ -60,8 +54,7 @@ class HomeController extends GetxController {
     if (labels.isNotEmpty) {
       // Pick the highest confidence label
       final topLabel = labels.reduce(
-            (curr, next) =>
-        curr.confidence > next.confidence ? curr : next,
+            (curr, next) => curr.confidence > next.confidence ? curr : next,
       );
       resultText.value =
       "${topLabel.label} (${(topLabel.confidence * 100).toStringAsFixed(1)}%)";
@@ -70,10 +63,16 @@ class HomeController extends GetxController {
     }
   }
 
+  /// Call when leaving the scan page
+  Future<void> disposeCamera() async {
+    await cameraController?.stopImageStream();
+    await cameraController?.dispose();
+    isCameraInitialized.value = false;
+  }
+
   @override
   void onClose() {
-    cameraController?.stopImageStream();
-    cameraController?.dispose();
+    disposeCamera();
     mlKitService.dispose();
     super.onClose();
   }
