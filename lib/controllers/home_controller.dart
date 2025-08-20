@@ -1,14 +1,19 @@
 import 'package:camera/camera.dart';
+import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/mlkit_service.dart';
+import 'model_controller.dart';
 import 'data_controller.dart';
 import 'package:intl/intl.dart';
 import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 
+
 class HomeController extends GetxController {
   final MLKitService mlKitService = MLKitService();
   final DataController dataController = Get.find<DataController>();
+  final modelController = ModelController();
 
   CameraController? cameraController;
   List<CameraDescription>? cameras;
@@ -47,6 +52,7 @@ class HomeController extends GetxController {
   }
 
   Future<void> processFrame(CameraImage cameraImage) async {
+
     try {
       final rotation = InputImageRotationValue.fromRawValue(
         cameras!.first.sensorOrientation,
@@ -55,24 +61,34 @@ class HomeController extends GetxController {
       final labels = await mlKitService.processCameraImage(cameraImage, rotation);
 
       if (labels.isNotEmpty) {
-        // Sort by confidence descending
         labels.sort((a, b) => b.confidence.compareTo(a.confidence));
-
         final topLabel = labels.first;
         print("🔹 Top label: ${topLabel.label}, Confidence: ${topLabel.confidence}");
 
-        // Only show if top label is an allowed mood
-        const allowedMoods = ['happy', 'sad', 'angry', 'scared'];
-        if (allowedMoods.contains(topLabel.label.toLowerCase()) && !_hasSaved) {
-          resultText.value = topLabel.label;
-          _hasSaved = true;
-          print("✅ Mood detected: ${topLabel.label}");
-          Future.delayed(const Duration(seconds: 5), () {
-            showCapturePopup(topLabel.label);
-          });
+        if (topLabel.label.toLowerCase() == "dog") {
+          print("✅ Dog detected! Running TFLite model for mood...");
+
+          final bytes = _concatenatePlanes(cameraImage.planes);
+
+          final mood = await modelController.classify(bytes);
+
+          if (mood.isNotEmpty) {
+            resultText.value = mood;
+            print("✅ Mood detected: $mood");
+
+            if (!_hasSaved) {
+              _hasSaved = true;
+              Future.delayed(const Duration(seconds: 5), () {
+                showCapturePopup(mood);
+              });
+            }
+          } else {
+            resultText.value = "Mood unknown";
+            print("⚠️ TFLite model returned unknown mood");
+          }
         } else {
           resultText.value = "Position your dog";
-          print("⚠️ Top label not a mood or not allowed: ${topLabel.label}");
+          print("⚠️ Top label not a dog: ${topLabel.label}");
         }
       } else {
         resultText.value = "No labels detected";
@@ -83,6 +99,15 @@ class HomeController extends GetxController {
       resultText.value = "Error detecting mood";
     }
   }
+
+  Uint8List _concatenatePlanes(List<Plane> planes) {
+    final WriteBuffer allBytes = WriteBuffer();
+    for (final plane in planes) {
+      allBytes.putUint8List(plane.bytes);
+    }
+    return allBytes.done().buffer.asUint8List();
+  }
+
 
 
   void showCapturePopup(String mood) {
