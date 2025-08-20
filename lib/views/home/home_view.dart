@@ -81,7 +81,7 @@ class HomeView extends StatelessWidget {
                 padding: const EdgeInsets.all(40),
               ),
               onPressed: () async {
-                final c = Get.find<HomeController>();
+                final c = Get.find<HomeController>();//Not used in the code
                 await Get.to(() => const StartScanPage(), arguments: {'autoSave': false});
               },
               child: const Icon(
