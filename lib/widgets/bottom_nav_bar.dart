@@ -10,25 +10,21 @@ class BottomNavBar extends StatelessWidget {
     final c = Get.find<MainController>();
 
     return Obx(
-          () => SizedBox(
-        height: 70,
-        child: BottomNavigationBar(
-          backgroundColor: Color(0xFF1E1E1E),
-          type: BottomNavigationBarType.fixed,
-          currentIndex: c.currentIndex.value,
-          onTap: (i) => c.changePage(i),
-          selectedItemColor: const Color(0xFFE15C31),
-          unselectedItemColor: const Color(0xFFE15C31),
-          selectedLabelStyle: const TextStyle(fontSize: 12),
-          unselectedLabelStyle: const TextStyle(fontSize: 12),
-
-          items: [
-            _buildNavItem(Icons.home_outlined, "Home", 0, c),
-            _buildNavItem(Icons.analytics, "Analysis", 1, c),
-            _buildNavItem(Icons.screen_search_desktop_outlined, "Articles", 2, c),
-            _buildNavItem(Icons.pets, "Profile", 3, c),
-          ],
-        ),
+          () => BottomNavigationBar(
+        backgroundColor: const Color(0xFF1E1E1E),
+        type: BottomNavigationBarType.fixed,
+        currentIndex: c.currentIndex.value,
+        onTap: (i) => c.changePage(i),
+        selectedItemColor: const Color(0xFFE15C31),
+        unselectedItemColor: const Color(0xFFE15C31),
+        selectedLabelStyle: const TextStyle(fontSize: 12),
+        unselectedLabelStyle: const TextStyle(fontSize: 12),
+        items: [
+          _buildNavItem(Icons.home_outlined, "Home", 0, c),
+          _buildNavItem(Icons.analytics, "Analysis", 1, c),
+          _buildNavItem(Icons.screen_search_desktop_outlined, "Articles", 2, c),
+          _buildNavItem(Icons.pets, "Profile", 3, c),
+        ],
       ),
     );
   }
@@ -38,10 +34,8 @@ class BottomNavBar extends StatelessWidget {
     return BottomNavigationBarItem(
       icon: Obx(() {
         final isSelected = c.currentIndex.value == index;
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 250),
-          curve: Curves.easeOut,
-          margin: EdgeInsets.only(bottom: isSelected ? 12 : 0),
+        return Transform.translate(
+          offset: Offset(0, isSelected ? -6 : 0),
           child: Icon(icon),
         );
       }),
