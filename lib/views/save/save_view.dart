@@ -54,15 +54,25 @@ class _SaveViewState extends State<SaveView> {
     final monthLabel = DateFormat('MMMM yyyy').format(selectedMonth);
 
     final filteredGroupedSaves = Map<String, List<Map<String, dynamic>>>.from(
-      groupedSaves..removeWhere((key, value) {
-        final date = DateTime.tryParse(key);
-        if (date == null) return true;
-        return !(date.year == selectedMonth.year && date.month == selectedMonth.month);
-      }),
+      groupedSaves
+        ..removeWhere((key, value) {
+          final date = DateTime.tryParse(key);
+          if (date == null) return true;
+          return !(date.year == selectedMonth.year &&
+              date.month == selectedMonth.month);
+        }),
     );
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Saves')),
+      appBar: AppBar(
+          title: const Text(
+        'Saves',
+        style: TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
+      )),
       body: Column(
         children: [
           Container(
@@ -75,16 +85,20 @@ class _SaveViewState extends State<SaveView> {
                   icon: const Icon(Icons.chevron_left),
                   onPressed: () {
                     setState(() {
-                      selectedMonth = DateTime(selectedMonth.year, selectedMonth.month - 1);
+                      selectedMonth =
+                          DateTime(selectedMonth.year, selectedMonth.month - 1);
                     });
                   },
                 ),
-                Text(monthLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(monthLabel,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
                   onPressed: () {
                     setState(() {
-                      selectedMonth = DateTime(selectedMonth.year, selectedMonth.month + 1);
+                      selectedMonth =
+                          DateTime(selectedMonth.year, selectedMonth.month + 1);
                     });
                   },
                 ),
@@ -102,10 +116,12 @@ class _SaveViewState extends State<SaveView> {
                 mainAxisSpacing: 4,
                 childAspectRatio: 1,
               ),
-              itemCount: DateUtils.getDaysInMonth(selectedMonth.year, selectedMonth.month),
+              itemCount: DateUtils.getDaysInMonth(
+                  selectedMonth.year, selectedMonth.month),
               itemBuilder: (context, index) {
                 final day = index + 1;
-                final date = DateTime(selectedMonth.year, selectedMonth.month, day);
+                final date =
+                    DateTime(selectedMonth.year, selectedMonth.month, day);
                 final dateKey = DateFormat('yyyy-MM-dd').format(date);
                 final hasSave = filteredGroupedSaves.containsKey(dateKey);
 
@@ -126,50 +142,54 @@ class _SaveViewState extends State<SaveView> {
               },
             ),
           ),
-
           const SizedBox(height: 8),
           Expanded(
             child: filteredGroupedSaves.isEmpty
                 ? const Center(child: Text('No saves for this month'))
                 : ListView(
-              padding: const EdgeInsets.all(8),
-              children: filteredGroupedSaves.entries.map((entry) {
-                final day = entry.key;
-                final dailySaves = entry.value;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      DateFormat('EEEE, MMM d, yyyy').format(DateTime.parse(day)),
-                      style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 4),
-                    ...dailySaves.map((save) {
-                      DateTime? saveDate;
-                      try {
-                        saveDate = DateTime.parse(save['dateSave']!);
-                      } catch (e) {
-                        print("⚠️ Invalid save date: ${save['dateSave']}");
-                        return Container();
-                      }
+                    padding: const EdgeInsets.all(8),
+                    children: filteredGroupedSaves.entries.map((entry) {
+                      final day = entry.key;
+                      final dailySaves = entry.value;
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            DateFormat('EEEE, MMM d, yyyy')
+                                .format(DateTime.parse(day)),
+                            style: const TextStyle(
+                                fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 4),
+                          ...dailySaves.map((save) {
+                            DateTime? saveDate;
+                            try {
+                              saveDate = DateTime.parse(save['dateSave']!);
+                            } catch (e) {
+                              print(
+                                  "⚠️ Invalid save date: ${save['dateSave']}");
+                              return Container();
+                            }
 
-                      final time = DateFormat('hh:mm a').format(saveDate);
-                      final mood = save['mood'] ?? '';
-                      final info = save['info'] ?? '';
+                            final time = DateFormat('hh:mm a').format(saveDate);
+                            final mood = save['mood'] ?? '';
+                            final info = save['info'] ?? '';
 
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 4),
-                        child: ListTile(
-                          title: Text(mood, style: const TextStyle(fontWeight: FontWeight.bold)),
-                          subtitle: Text('$time\n$info'),
-                        ),
+                            return Card(
+                              margin: const EdgeInsets.symmetric(vertical: 4),
+                              child: ListTile(
+                                title: Text(mood,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.bold)),
+                                subtitle: Text('$time\n$info'),
+                              ),
+                            );
+                          }).toList(),
+                          const SizedBox(height: 8),
+                        ],
                       );
                     }).toList(),
-                    const SizedBox(height: 8),
-                  ],
-                );
-              }).toList(),
-            ),
+                  ),
           ),
         ],
       ),

@@ -19,7 +19,6 @@ class SettingsView extends StatelessWidget {
             title: const Text('Registered Dogs'),
             onTap: () => Get.toNamed(AppRoutes.registerDogs),
           ),
-
           ListTile(
             title: const Text('Data Privacy'),
             onTap: () {
@@ -28,20 +27,19 @@ class SettingsView extends StatelessWidget {
                   title: const Text("Data Privacy"),
                   content: const Text(
                     "We respect your privacy. All data collected by this app "
-                        "is stored securely and only used to improve your experience. "
-                        "You can manage, edit, or delete your account data at any time.",
+                    "is stored securely and only used to improve your experience. "
+                    "You can manage, edit, or delete your account data at any time.",
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Get.back(),
-                      child: const Text("Close"),
+                      child: const Text("Close", style: TextStyle(color: Color(0xFFE15C31))),
                     ),
                   ],
                 ),
               );
             },
           ),
-
           ListTile(
             title: const Text('Account Information'),
             onTap: () => Get.to(() => AccountInfoPage()),
@@ -53,6 +51,10 @@ class SettingsView extends StatelessWidget {
                 AlertDialog(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
+                    side: const BorderSide(
+                      color: Color(0xFFE15C31),
+                      width: 2,
+                    ),
                   ),
                   title: const Text(
                     "Logout",
@@ -64,16 +66,28 @@ class SettingsView extends StatelessWidget {
                   ),
                   actionsAlignment: MainAxisAlignment.spaceEvenly,
                   actions: [
-                    TextButton(
+                    OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                          color: Color(0xFFE15C31),
+                          width: 2,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
                       onPressed: () => Get.back(),
                       child: const Text(
                         "No",
-                        style: TextStyle(color: Colors.grey),
+                        style: TextStyle(color: Color(0xFFE15C31)),
                       ),
                     ),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
+                        backgroundColor: const Color(0xFFE15C31),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
                       ),
                       onPressed: () async {
                         final auth = Get.find<DataController>();
@@ -81,7 +95,7 @@ class SettingsView extends StatelessWidget {
                         Get.back();
                         Get.offAllNamed('/login');
                       },
-                      child: const Text("Yes"),
+                      child: const Text("Yes", style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -103,106 +117,216 @@ class AccountInfoPage extends StatelessWidget {
     final user = auth.appUser.value;
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Account Information")),
+      appBar: AppBar(
+        title: const Text("Account Information"),
+        centerTitle: true,
+      ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(24),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text("Username: ${user?.name ?? ''}", style: const TextStyle(fontSize: 16)),
-                ElevatedButton(
+                Text("Username", style: TextStyle(fontSize: 16)),
+                IconButton(
+                  icon: Icon(Icons.edit_outlined, color: Colors.black87),
                   onPressed: () => _showEditDialog(context, isUsername: true),
-                  child: const Text("Edit"),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child:
+                  Text(user?.name ?? '', style: const TextStyle(fontSize: 16)),
+            ),
+            const SizedBox(height: 24),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  "Password: ${user?.password != null ? '*' * user!.password.length : ''}",
-                  style: const TextStyle(fontSize: 16),
-                ),
-                ElevatedButton(
+                Text("Password", style: TextStyle(fontSize: 16)),
+                IconButton(
+                  icon: Icon(Icons.edit_outlined, color: Colors.black87),
                   onPressed: () => _showEditDialog(context, isUsername: false),
-                  child: const Text("Edit"),
                 ),
               ],
             ),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () => _showDeleteAccountDialog(context),
-              child: const Text("Delete Account"),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                  user?.password != null ? '*' * user!.password.length : '',
+                  style: const TextStyle(fontSize: 16)),
             ),
+            const Spacer(),
+            Center(
+              child: TextButton.icon(
+                icon: const Icon(Icons.delete_forever, color: Colors.red),
+                label: const Text("Delete Account",
+                    style: TextStyle(color: Colors.red)),
+                onPressed: () => _showDeleteAccountDialog(context),
+              ),
+            )
           ],
         ),
       ),
     );
   }
+
   void _showEditDialog(BuildContext context, {required bool isUsername}) {
     final currentController = TextEditingController();
     final newController = TextEditingController();
     final confirmController = TextEditingController();
 
-    Get.dialog(AlertDialog(
-      title: Text(isUsername ? "Edit Username" : "Edit Password"),
-      content: SingleChildScrollView(
-        child: Column(
-          children: [
-            TextField(
-              controller: currentController,
-              decoration: InputDecoration(
-                labelText: isUsername ? "Enter Current Username" : "Enter Current Password",
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.all(20),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      isUsername ? 'Edit Username' : 'Edit Password',
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Get.back(),
+                    child: const Icon(Icons.close),
+                  ),
+                ],
               ),
-            ),
-            TextField(
-              controller: newController,
-              decoration: InputDecoration(
-                labelText: isUsername ? "Enter New Username" : "Enter New Password",
+              const SizedBox(height: 16),
+              Text(
+                isUsername
+                    ? "Please enter your current username to edit."
+                    : "Please enter your current password to edit.",
+                style: TextStyle(color: Colors.black87),
               ),
-            ),
-            TextField(
-              controller: confirmController,
-              decoration: InputDecoration(
-                labelText: isUsername ? "Confirm New Username" : "Confirm New Password",
+              const SizedBox(height: 16),
+              TextField(
+                controller: currentController,
+                decoration: InputDecoration(
+                  hintText: isUsername
+                      ? "Enter Current Username"
+                      : "Enter Current Password",
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(
+                          0xFFE15C31),
+                      width: 2,
+                    ),
+                  ),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: newController,
+                decoration: InputDecoration(
+                  hintText:
+                      isUsername ? "Enter New Username" : "Enter New Password",
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(
+                          0xFFE15C31),
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: confirmController,
+                decoration: InputDecoration(
+                  hintText: isUsername
+                      ? "Confirm New Username"
+                      : "Confirm New Password",
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(
+                          0xFFE15C31),
+                      width: 2,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE15C31),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30)),
+                  ),
+                  onPressed: () {
+                    final current = currentController.text.trim();
+                    final newValue = newController.text.trim();
+                    final confirm = confirmController.text.trim();
+
+                    if (current.isEmpty ||
+                        newValue.isEmpty ||
+                        confirm.isEmpty) {
+                      Get.snackbar("Error", "All fields are required");
+                      return;
+                    }
+                    if (newValue != confirm) {
+                      Get.snackbar(
+                          "Error", "Confirmation does not match new value");
+                      return;
+                    }
+                    if (isUsername) {
+                      auth.updateUsername(newValue);
+                    } else {
+                      auth.updatePassword(newValue);
+                    }
+                    Get.back();
+                    Get.snackbar("Success",
+                        "${isUsername ? "Username" : "Password"} updated");
+                  },
+                  child: const Text("Save",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: Colors.white)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Get.back(), child: const Text("Cancel")),
-        ElevatedButton(
-          onPressed: () {
-            final current = currentController.text.trim();
-            final newValue = newController.text.trim();
-            final confirm = confirmController.text.trim();
-
-            if (current.isEmpty || newValue.isEmpty || confirm.isEmpty) {
-              Get.snackbar("Error", "All fields are required");
-              return;
-            }
-            if (newValue != confirm) {
-              Get.snackbar("Error", "Confirmation does not match new value");
-              return;
-            }
-            if (isUsername) {
-              auth.updateUsername(newValue);
-            } else {
-              auth.updatePassword(newValue);
-            }
-            Get.back();
-            Get.snackbar("Success", "${isUsername ? "Username" : "Password"} updated");
-          },
-          child: const Text("Save"),
-        ),
-      ],
-    ));
+    );
   }
+
   void _showDeleteAccountDialog(BuildContext context) {
     final auth = Get.find<DataController>();
     final usernameController = TextEditingController();
@@ -211,67 +335,127 @@ class AccountInfoPage extends StatelessWidget {
     final confirmDelete = false.obs;
     final downloadData = false.obs;
 
-    Get.dialog(AlertDialog(
-      title: const Text("Delete Account"),
-      content: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text("Deleting your account removes all your data and information."),
-            const SizedBox(height: 8),
-            TextField(controller: usernameController, decoration: const InputDecoration(labelText: "Username")),
-            TextField(controller: passwordController, decoration: const InputDecoration(labelText: "Password"), obscureText: true),
-            TextField(controller: confirmController, decoration: const InputDecoration(labelText: "Confirm Password"), obscureText: true),
-            const SizedBox(height: 8),
-            Obx(() => CheckboxListTile(
-              value: confirmDelete.value,
-              onChanged: (v) => confirmDelete.value = v ?? false,
-              title: const Text("I confirm to delete this account"),
-            )),
-            Obx(() => CheckboxListTile(
-              value: downloadData.value,
-              onChanged: (v) => downloadData.value = v ?? false,
-              title: const Text("I want to download all my data before deleting"),
-            )),
-          ],
+    Get.dialog(
+      Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        insetPadding: const EdgeInsets.all(20),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Obx(() => Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    children: [
+                      const Expanded(
+                        child: Text("Delete Account",
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.bold)),
+                      ),
+                      GestureDetector(
+                        onTap: () => Get.back(),
+                        child: const Icon(Icons.close),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                      "Deleting your account removes all your data and information. To continue, enter your username and password."),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: usernameController,
+                    decoration: InputDecoration(
+                      hintText: "Username",
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: passwordController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      hintText: "Password",
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: confirmController,
+                    obscureText: true,
+                    decoration: InputDecoration(
+                      hintText: "Confirm Password",
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  CheckboxListTile(
+                    value: confirmDelete.value,
+                    onChanged: (v) => confirmDelete.value = v ?? false,
+                    title: const Text("I confirm to delete the account"),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  CheckboxListTile(
+                    value: downloadData.value,
+                    onChanged: (v) => downloadData.value = v ?? false,
+                    title: const Text(
+                        "I want to download all the data before deleting."),
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFE15C31),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30)),
+                      ),
+                      onPressed: () async {
+                        final username = usernameController.text.trim();
+                        final password = passwordController.text.trim();
+                        final confirm = confirmController.text.trim();
+
+                        final user = auth.appUser.value;
+                        final phone = "+${user?.phone}";
+
+                        if (username.isEmpty ||
+                            password.isEmpty ||
+                            confirm.isEmpty) {
+                          Get.snackbar("Error", "All fields are required");
+                          return;
+                        }
+                        if (password != confirm) {
+                          Get.snackbar("Error", "Passwords do not match");
+                          return;
+                        }
+                        if (!confirmDelete.value) {
+                          Get.snackbar(
+                              "Error", "Please confirm account deletion");
+                          return;
+                        }
+
+                        if (phone != null) {
+                          await auth.firebaseService.db
+                              .child('accounts')
+                              .child(phone)
+                              .remove();
+                          await auth.logout();
+                          Get.back();
+                          Get.snackbar(
+                              "Success", "Account deleted successfully");
+                        }
+                      },
+                      child: const Text("Delete",
+                          style: TextStyle(color: Colors.white, fontSize: 16)),
+                    ),
+                  ),
+                ],
+              )),
         ),
       ),
-      actions: [
-        TextButton(onPressed: () => Get.back(), child: const Text("Cancel")),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          onPressed: () async {
-            final username = usernameController.text.trim();
-            final password = passwordController.text.trim();
-            final confirm = confirmController.text.trim();
-
-            final user = auth.appUser.value;
-            final phone = "+${user?.phone}";
-
-            if (username.isEmpty || password.isEmpty || confirm.isEmpty) {
-              print(phone);
-              Get.snackbar("Error", "All fields are required");
-              return;
-            }
-            if (password != confirm) {
-              Get.snackbar("Error", "Passwords do not match");
-              return;
-            }
-            if (!confirmDelete.value) {
-              Get.snackbar("Error", "Please confirm account deletion");
-              return;
-            }
-
-            if (phone != null) {
-              await auth.firebaseService.db.child('accounts').child(phone).remove();
-              await auth.logout();
-              Get.back();
-              Get.snackbar("Success", "Account deleted successfully");
-            }
-          },
-          child: const Text("Delete"),
-        ),
-      ],
-    ));
+    );
   }
 }

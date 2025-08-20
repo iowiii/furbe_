@@ -34,32 +34,100 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
     String? gender;
 
     final confirmed = await Get.dialog<bool>(
-      AlertDialog(
-        title: const Text('Add Dog'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircleAvatar(radius: 50, backgroundImage: FileImage(File(pickedFile.path))),
-            const SizedBox(height: 12),
-            TextField(
-              controller: dogNameController,
-              decoration: const InputDecoration(labelText: 'Dog Name'),
-            ),
-            DropdownButtonFormField<String>(
-              value: gender,
-              decoration: const InputDecoration(labelText: 'Gender'),
-              items: const [
-                DropdownMenuItem(value: 'Male', child: Text('Male')),
-                DropdownMenuItem(value: 'Female', child: Text('Female')),
+      Dialog(
+        backgroundColor: const Color(0xFFF4EDF4), // soft violet background
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Add Dog',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2E2E2E),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                CircleAvatar(
+                  radius: 50,
+                  backgroundImage: FileImage(File(pickedFile.path)),
+                ),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: dogNameController,
+                  decoration: InputDecoration(
+                    labelText: 'Dog Name',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ), focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                  borderSide: const BorderSide(
+                    color: Color(
+                        0xFFE15C31),
+                    width: 2,
+                  ),
+                ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: gender,
+                  decoration: InputDecoration(
+                    labelText: 'Gender',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(
+                            0xFFE15C31),
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Male', child: Text('Male')),
+                    DropdownMenuItem(value: 'Female', child: Text('Female')),
+                  ],
+                  onChanged: (val) => gender = val,
+                ),
+                const SizedBox(height: 24),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    TextButton(
+                      onPressed: () => Get.back(result: false),
+                      child: const Text(
+                        'Cancel',
+                        style: TextStyle(color: Color(0xFFE15C31)),
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () => Get.back(result: true),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE15C31),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                      ),
+                      child: const Text('Add',style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
               ],
-              onChanged: (val) => gender = val,
             ),
-          ],
+          ),
         ),
-        actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Get.back(result: true), child: const Text('Add')),
-        ],
       ),
     );
 
@@ -143,11 +211,11 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                       onPressed: () async {
                         final confirmed = await Get.dialog<bool>(
                           AlertDialog(
-                            title: const Text('Delete Dog'),
+                            title: const Text('Delete Dog' , style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                             content: Text('Are you sure you want to delete ${dog.name}?'),
                             actions: [
-                              TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
-                              TextButton(onPressed: () => Get.back(result: true), child: const Text('Delete')),
+                              TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel', style: TextStyle(color: Color(0xFFE15C31)))),
+                              TextButton(onPressed: () => Get.back(result: true), child: const Text('Delete', style: TextStyle(color: Color(0xFFE15C31)))),
                             ],
                           ),
                         );

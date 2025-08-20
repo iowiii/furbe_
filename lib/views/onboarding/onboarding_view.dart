@@ -19,7 +19,7 @@ class _OnboardingViewState extends State<OnboardingView> {
       'text': 'Helping you understand your dog\'s mood with AI is our goal here in FurBe.'
     },
     {
-      'head': 'How does it work',
+      'head': 'How does it work?',
       'text': 'You can detect your dog\'s mood by placing your dog within the camera frame.'
     },
     {
@@ -33,57 +33,98 @@ class _OnboardingViewState extends State<OnboardingView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Column(
-        children: [
-          Expanded(
-            child: PageView.builder(
-              controller: _controller,
-              itemCount: pages.length,
-              onPageChanged: (index) {
-                setState(() => currentPage = index);
-              },
-              itemBuilder: (_, index) {
-                final page = pages[index];
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Column(
+          children: [
+            Expanded(
+              child: PageView.builder(
+                controller: _controller,
+                itemCount: pages.length,
+                onPageChanged: (index) {
+                  setState(() => currentPage = index);
+                },
+                itemBuilder: (_, index) {
+                  final page = pages[index];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Text(page['head']!, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
-                        const SizedBox(height: 20),
-                        Text(page['text']!, textAlign: TextAlign.center, style: const TextStyle(fontSize: 16)),
+                        const SizedBox(height: 40),
+                        Text(
+                          page['head']!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        Text(
+                          page['text']!,
+                          textAlign: TextAlign.center,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.normal,
+                            color: Colors.black,
+                            height: 1.6,
+                          ),
+                        ),
                         if (index == pages.length - 1)
                           Padding(
-                            padding: const EdgeInsets.only(top: 40),
-                            child: ElevatedButton(
-                              onPressed: () => Get.off(() => const DogSetupNameView()),
-                              child: const Text('Get Started'),
+                            padding: const EdgeInsets.only(top: 48.0),
+                            child: SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFFE15C31),
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(30),
+                                  ),
+                                ),
+                                onPressed: () => Get.off(() => const DogSetupNameView()),
+                                child: const Text(
+                                  'Get Started',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                       ],
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-              pages.length,
-                  (index) => Container(
-                margin: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-                width: 10,
-                height: 10,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: index == currentPage ? Colors.orange : Colors.grey,
+            Padding(
+              padding: const EdgeInsets.only(bottom: 24.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(
+                  pages.length,
+                      (index) => AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: index == currentPage ? const Color(0xFFE15C31) : Colors.grey.shade300,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import '../../controllers/data_controller.dart';
 import '../../core/app_routes.dart';
 
-
 class OtpVerificationView extends StatefulWidget {
   const OtpVerificationView({super.key});
 
@@ -24,20 +23,12 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
     final args = Get.arguments as Map<String, dynamic>;
     verificationId = args['verificationId'];
     phone = args['phone'];
-    print("Received verificationId: $verificationId, phone: $phone");
   }
 
   Future<void> submitOtp() async {
     String otp = otpControllers.map((c) => c.text).join();
     if (otp.length < 6) {
       Get.snackbar('Error', 'Please enter all 6 digits');
-      return;
-    }
-    if (verificationId == DataController.devVerificationId &&
-        phone == DataController.devPhone) {
-      print("Dev login successful for $phone");
-      auth.user.value = FirebaseAuth.instance.currentUser;
-      Get.offAllNamed(AppRoutes.otpVerified);
       return;
     }
     final success = await auth.verifyOtp(verificationId, otp);
@@ -47,6 +38,7 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
       Get.snackbar('OTP Error', 'Verification failed');
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -62,10 +54,12 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'Confirm your account by entering the one-time pin code we have sent you.',
+                'Confirm your account by entering the one-time pin code we have sent you through your registered email address.',
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
+
+              // OTP fields
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: List.generate(6, (index) {
@@ -76,10 +70,11 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
                       keyboardType: TextInputType.number,
                       textAlign: TextAlign.center,
                       maxLength: 1,
+                      style: const TextStyle(fontSize: 20),
                       decoration: InputDecoration(
                         counterText: '',
                         filled: true,
-                        fillColor: Colors.grey[300],
+                        fillColor: Colors.grey[200],
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(8),
                           borderSide: BorderSide.none,
@@ -95,20 +90,25 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
                 }),
               ),
               const SizedBox(height: 32),
+
+              // Submit button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    backgroundColor: Color(0xFFE15C31),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                   ),
                   onPressed: submitOtp,
                   child: const Text(
                     'Submit',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
                   ),
                 ),
               ),

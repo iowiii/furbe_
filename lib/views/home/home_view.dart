@@ -20,7 +20,7 @@ class HomeView extends StatelessWidget {
           return Row(
             children: [
               CircleAvatar(
-                radius: 30.0,
+                radius: 32.0,
                 backgroundImage: currentDog != null && currentDog.photo.isNotEmpty
                     ? MemoryImage(base64Decode(currentDog.photo))
                     : null,
@@ -32,7 +32,7 @@ class HomeView extends StatelessWidget {
               Text(
                 currentDog?.name ?? 'No Dog',
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 30,
                   fontWeight: FontWeight.bold,
                   color: Colors.black,
                 ),

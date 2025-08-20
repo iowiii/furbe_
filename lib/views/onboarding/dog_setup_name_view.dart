@@ -15,24 +15,49 @@ class _DogSetupNameViewState extends State<DogSetupNameView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Dog Name')),
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Text('What is your dog\'s name?', style: TextStyle(fontSize: 20)),
-            const SizedBox(height: 16),
-            TextField(controller: nameController, decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Dog Name')),
-            const SizedBox(height: 32),
-            ElevatedButton(
-              onPressed: () {
-                if (nameController.text.trim().isEmpty) return;
-                Get.to(() => DogSetupGenderView(dogName: nameController.text.trim()));
-              },
-              child: const Text('Continue'),
-            ),
-          ],
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const Text(
+                'What is the name\nof your dog?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 32),
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(
+                  hintText: 'Enter dog name',
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 40),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE15C31),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                  onPressed: () {
+                    if (nameController.text.trim().isEmpty) return;
+                    Get.to(() => DogSetupGenderView(dogName: nameController.text.trim()));
+                  },
+                  child: const Text('Continue', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

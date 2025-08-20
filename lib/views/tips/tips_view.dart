@@ -8,26 +8,34 @@ class TipsView extends StatelessWidget {
     {
       "title": "How To Take Care of Dogs: A Pet Parent Checklist",
       "subtitle": "petMD",
-      "logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQqLPZPuqRWs2S6mjJIptbz4nXwQZXIk9zuIb7IXCx2cADmhw2hEDL5F3wXieULE_wt3o&usqp=CAU", // placeholder
-      "url": "https://www.petmd.com/dog/general-health/how-to-take-care-of-dogs-pet-parent-checklist"
+      "logo":
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSQqLPZPuqRWs2S6mjJIptbz4nXwQZXIk9zuIb7IXCx2cADmhw2hEDL5F3wXieULE_wt3o&usqp=CAU", // placeholder
+      "url":
+          "https://www.petmd.com/dog/general-health/how-to-take-care-of-dogs-pet-parent-checklist"
     },
     {
       "title": "Top Ten Tips for Responsible Pet Ownership",
       "subtitle": "National Pet Month",
-      "logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAlwa3gMM7OSmTFXiyGNfQKs6dkVS2O5alcQ&s", // placeholder
-      "url": "https://www.nationalpetmonth.org.uk/news/top-ten-tips-for-responsible-pet-ownership"
+      "logo":
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRAlwa3gMM7OSmTFXiyGNfQKs6dkVS2O5alcQ&s", // placeholder
+      "url":
+          "https://www.nationalpetmonth.org.uk/news/top-ten-tips-for-responsible-pet-ownership"
     },
     {
       "title": "First Time Down Owner Guide",
       "subtitle": "Cesar",
-      "logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrGI11cGRmUKnCspNHHGPMG4cAiTQjw9Lzgw&s", // placeholder
-      "url": "https://www.cesar.com.ph/dog-care/health-and-safety/first-time-dog-owner-guide"
+      "logo":
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTrGI11cGRmUKnCspNHHGPMG4cAiTQjw9Lzgw&s", // placeholder
+      "url":
+          "https://www.cesar.com.ph/dog-care/health-and-safety/first-time-dog-owner-guide"
     },
     {
       "title": "First aid tips for pet owners",
       "subtitle": "AVMA",
-      "logo": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxWWCv6Q7mKGPE4RtrTO0Zx6hCuD0ONY08qQ&s", // placeholder
-      "url": "https://www.avma.org/resources-tools/pet-owners/emergencycare/first-aid-tips-pet-owners"
+      "logo":
+          "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRxWWCv6Q7mKGPE4RtrTO0Zx6hCuD0ONY08qQ&s", // placeholder
+      "url":
+          "https://www.avma.org/resources-tools/pet-owners/emergencycare/first-aid-tips-pet-owners"
     },
   ];
 
@@ -38,15 +46,18 @@ class TipsView extends StatelessWidget {
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Tips", style: TextStyle(
-        fontSize: 30,
-        fontWeight: FontWeight.bold,
-        color: Colors.black,
-      ),)),
+      appBar: AppBar(
+          title: const Text(
+        "Tips",
+        style: TextStyle(
+          fontSize: 30,
+          fontWeight: FontWeight.bold,
+          color: Colors.black,
+        ),
+      )),
       body: ListView.builder(
         itemCount: articles.length,
         itemBuilder: (context, index) {
@@ -62,7 +73,7 @@ class TipsView extends StatelessWidget {
                 article["logo"]!,
                 width: 40,
                 errorBuilder: (context, error, stackTrace) =>
-                const Icon(Icons.pets, size: 40),
+                    const Icon(Icons.pets, size: 40),
               ),
               title: Text(article["title"]!,
                   style: const TextStyle(fontWeight: FontWeight.bold)),

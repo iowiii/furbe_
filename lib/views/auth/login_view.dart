@@ -28,9 +28,8 @@ class _LoginViewState extends State<LoginView> {
               // Logo
               Center(
                 child: Image.asset(
-                  'assets/images/logo_main.png',
-                  width: 200, // Set desired width
-                  height: 150,
+                  'assets/images/logo_main_zoomed.png',
+                  height: 80,
                 ),
               ),
               const SizedBox(height: 40),
