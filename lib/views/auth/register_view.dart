@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
+import '../../controllers/data_controller.dart';
 import '../../core/app_routes.dart';
 
 class RegisterView extends StatefulWidget {
@@ -15,7 +15,7 @@ class _RegisterViewState extends State<RegisterView> {
   final phoneController = TextEditingController();
   final passController = TextEditingController();
   final confirmPassController = TextEditingController();
-  final authController = Get.find<AuthController>();
+  final authController = Get.find<DataController>();
 
   bool isLoading = false;
 
@@ -33,8 +33,6 @@ class _RegisterViewState extends State<RegisterView> {
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 24),
               ),
               const SizedBox(height: 24),
-
-              // Name
               TextField(
                 controller: nameController,
                 decoration: const InputDecoration(
@@ -43,8 +41,6 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Phone
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
@@ -54,8 +50,6 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Password
               TextField(
                 controller: passController,
                 obscureText: true,
@@ -65,8 +59,6 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Confirm Password
               TextField(
                 controller: confirmPassController,
                 obscureText: true,
@@ -76,8 +68,6 @@ class _RegisterViewState extends State<RegisterView> {
                 ),
               ),
               const SizedBox(height: 32),
-
-              // Register Button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -93,17 +83,13 @@ class _RegisterViewState extends State<RegisterView> {
                       Get.snackbar('Error', 'Please fill in all fields');
                       return;
                     }
-
                     if (password != confirmPassword) {
                       Get.snackbar('Error', 'Passwords do not match');
                       return;
                     }
-
                     String formattedPhone = rawPhone.replaceAll('+', '');
                     if (!formattedPhone.startsWith('63')) formattedPhone = '63$formattedPhone';
-
                     setState(() => isLoading = true);
-
                     try {
                       await authController.registerUser(
                         name,

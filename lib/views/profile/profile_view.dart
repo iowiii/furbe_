@@ -1,10 +1,8 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
+import '../../controllers/data_controller.dart';
 import '../../core/app_routes.dart';
-import 'dart:io';
 
 
 class ProfileView extends StatefulWidget {
@@ -15,25 +13,27 @@ class ProfileView extends StatefulWidget {
 }
 
 class _ProfileViewState extends State<ProfileView> {
-  final auth = Get.find<AuthController>();
+  final auth = Get.find<DataController>();
   int currentDogIndex = 0;
 
   void _nextDog() {
-    final dogs = auth.appUser.value?.dogs.values.toList() ?? [];
-    if (dogs.isNotEmpty) {
-      setState(() {
-        currentDogIndex = (currentDogIndex + 1) % dogs.length;
-      });
-    }
+    final dogs = auth.userDogs;
+    if (dogs.isEmpty) return;
+
+    int currentIndex = dogs.indexWhere((d) => d.id == auth.currentDog.value?.id);
+    currentIndex = (currentIndex + 1) % dogs.length;
+
+    auth.setCurrentDog(dogs[currentIndex]);
   }
 
   void _prevDog() {
-    final dogs = auth.appUser.value?.dogs.values.toList() ?? [];
-    if (dogs.isNotEmpty) {
-      setState(() {
-        currentDogIndex = (currentDogIndex - 1 + dogs.length) % dogs.length;
-      });
-    }
+    final dogs = auth.userDogs;
+    if (dogs.isEmpty) return;
+
+    int currentIndex = dogs.indexWhere((d) => d.id == auth.currentDog.value?.id);
+    currentIndex = (currentIndex - 1 + dogs.length) % dogs.length;
+
+    auth.setCurrentDog(dogs[currentIndex]);
   }
 
   @override
@@ -54,17 +54,8 @@ class _ProfileViewState extends State<ProfileView> {
         ],
       ),
       body: Obx(() {
-        final user = auth.appUser.value;
-        if (user == null) {
-          return const Center(child: Text('Not logged in'));
-        }
-
-        final dogs = auth.appUser.value?.dogs.values.toList() ?? [];
-        final dog = dogs[currentDogIndex];
-
-        if (dogs.isEmpty) {
-          return const Center(child: Text('No dogs added yet'));
-        }
+        final dog = auth.currentDog.value;
+        if (dog == null) return const Center(child: Text('No dogs added yet'));
 
         return Padding(
           padding: const EdgeInsets.all(24),
@@ -74,12 +65,7 @@ class _ProfileViewState extends State<ProfileView> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  if (dogs.length > 1)
-                    IconButton(
-                      icon: const Icon(Icons.arrow_left),
-                      onPressed: _prevDog,
-                    ),
-
+                  IconButton(icon: const Icon(Icons.arrow_left), onPressed: _prevDog),
                   CircleAvatar(
                     radius: 80,
                     backgroundImage: dog.photo.isNotEmpty
@@ -89,21 +75,13 @@ class _ProfileViewState extends State<ProfileView> {
                         ? const Icon(Icons.pets, size: 80)
                         : null,
                   ),
-
-                  if (dogs.length > 1)
-                    IconButton(
-                      icon: const Icon(Icons.arrow_right),
-                      onPressed: _nextDog,
-                    ),
+                  IconButton(icon: const Icon(Icons.arrow_right), onPressed: _nextDog),
                 ],
               ),
-
               const SizedBox(height: 24),
-
               Text(
                 dog.name,
-                style: const TextStyle(
-                    fontSize: 24, fontWeight: FontWeight.bold),
+                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text('Gender: ${dog.gender}'),

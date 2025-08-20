@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
-
+import 'package:get_storage/get_storage.dart';
 import 'package:get/get.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../core/app_routes.dart';
@@ -10,29 +10,77 @@ import '../models/app_user.dart';
 import '../models/dog.dart' as dog_model;
 import 'package:uuid/uuid.dart';
 
-class AuthController extends GetxController {
+class DataController extends GetxController {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseService firebaseService = FirebaseService();
 
   final Rxn<User> user = Rxn<User>();
   final Rxn<AppUser> appUser = Rxn<AppUser>();
+  var currentDog = Rxn<dog_model.Dog>();
+  var dogSaves = <String, List<Map<String, dynamic>>>{}.obs;
+
   final DatabaseReference db = FirebaseDatabase.instance.ref();
 
   bool devMode = true;
   String? currentPhone;
+  final storage = GetStorage();
 
   static const String devPhone = "+631111111111";
   static const String devOtp = "123456";
   static const String devVerificationId = "631111111111";
+
+  var currentDogIndex = 0.obs;
+
+  void setDogIndex(int index) {
+    currentDogIndex.value = index;
+  }
 
   @override
   void onInit() {
     super.onInit();
     user.value = _auth.currentUser;
     _auth.userChanges().listen((u) => user.value = u);
+    _loadSession();
+
+    ever(currentDogIndex, (idx) {
+      final dogs = appUser.value?.dogs.values.toList() ?? [];
+      if (idx < dogs.length) {
+        print("🌍 Current Dog Index changed: $idx → ${dogs[idx].name}");
+      } else {
+        print("⚠️ Invalid dog index: $idx");
+      }
+    });
+  }
+
+  void _saveSession() {
+    if (appUser.value != null) {
+      storage.write('user', appUser.value!.toMap());
+    }
+    if (currentDog.value != null) {
+      storage.write('currentDogId', currentDog.value!.id);
+    }
+  }
+
+  void _loadSession() {
+    final userData = storage.read('user');
+    final dogId = storage.read('currentDogId');
+
+    if (userData != null) {
+      appUser.value = AppUser.fromMap(Map<String, dynamic>.from(userData));
+
+      if (dogId != null && appUser.value!.dogs.containsKey(dogId)) {
+        currentDog.value = appUser.value!.dogs[dogId];
+      }
+    }
+  }
+
+  void setCurrentDog(dog_model.Dog dog) {
+    currentDog.value = dog;
+    _saveSession();
   }
 
   Future<void> login(String phone, String? password) async {
+    phone = phone.replaceAll(' ', '');
     if (phone.isEmpty) {
       Get.snackbar('Login Error', 'Phone number cannot be empty');
       return;
@@ -67,6 +115,7 @@ class AuthController extends GetxController {
       currentPhone = phone;
       await loadAppUser(phone);
       user.value = null;
+      _saveSession();
       Get.offAllNamed(AppRoutes.main);
       return;
     }
@@ -93,16 +142,21 @@ class AuthController extends GetxController {
       photoBase64 = base64Encode(bytes);
     }
 
-    final dogJson = {
-      'id': dogId,
-      'name': name,
-      'gender': gender,
-      'type': type,
-      'info': info,
-      'photo': photoBase64,
-    };
+    final dog = dog_model.Dog(
+      id: dogId,
+      name: name,
+      gender: gender,
+      type: type,
+      info: info,
+      photo: photoBase64,
+    );
 
-    await firebaseService.setUserDog(currentPhone!, dogId, dogJson);
+    await firebaseService.setUserDog(currentPhone!, dogId, dog.toMap());
+    await loadAppUser(currentPhone!);
+
+    if (appUser.value != null && appUser.value!.dogs.containsKey(dogId)) {
+      setCurrentDog(appUser.value!.dogs[dogId]!);
+    }
   }
 
   Future<bool> verifyOtp(String verificationId, String smsCode) async {
@@ -138,6 +192,7 @@ class AuthController extends GetxController {
         required Function(String errorMessage) onError,
       }) async {
     bool exists = await isPhoneRegistered(phone);
+    phone = phone.replaceAll(' ', '');
     if (exists) {
       onError("Phone number already registered");
       return;
@@ -169,9 +224,14 @@ class AuthController extends GetxController {
 
     if (snapshot.exists && snapshot.value != null) {
       final userMap = snapshot.value as Map;
-      appUser.value = AppUser.fromMap(userMap);
+      appUser.value = AppUser.fromMap(Map<String, dynamic>.from(userMap));
+      if (appUser.value!.dogs.isNotEmpty) {
+        currentDog.value ??= appUser.value!.dogs.values.first;
+        print("🔹 CurrentDog set to: ${currentDog.value!.name}");
+      }
     } else {
       appUser.value = null;
+      currentDog.value = null;
     }
   }
 
@@ -224,6 +284,86 @@ class AuthController extends GetxController {
     print("Logged out");
     Get.offAllNamed(AppRoutes.login);
   }
-
   User? get currentUser => _auth.currentUser;
+}
+
+extension AuthUpdates on DataController {
+  Future<void> updateUsername(String newName) async {
+    final phone = currentPhone;
+    if (phone == null) return;
+
+    await firebaseService.db.child("accounts/$phone/name").set(newName);
+
+    appUser.update((user) {
+      if (user != null) user.name = newName;
+    });
+  }
+
+  Future<void> updatePassword(String newPassword) async {
+    final phone = currentPhone;
+    if (phone == null) return;
+
+    await firebaseService.db.child("accounts/$phone/password").set(newPassword);
+
+    appUser.update((user) {
+      if (user != null) user.password = newPassword;
+    });
+  }
+
+  DateTime safeParseDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) return DateTime.fromMillisecondsSinceEpoch(0);
+    try {
+      return DateTime.parse(dateString);
+    } catch (_) {
+      print("⚠️ Invalid date string: $dateString");
+      return DateTime.fromMillisecondsSinceEpoch(0);
+    }
+  }
+
+  Future<void> fetchDogSaves() async {
+    final userPhone = currentPhone;
+    final dog = currentDog.value;
+
+    print("📌 fetchDogSaves called for phone=$userPhone, dog=$dog");
+
+    if (userPhone == null || dog == null) {
+      print("⚠️ Cannot fetch saves: phone or dog is null");
+      return;
+    }
+
+    try {
+      final ref = firebaseService.db.child('accounts/$userPhone/saves/${dog.id}');
+      print("🔗 Firebase ref: $ref");
+
+      final snapshot = await ref.get();
+      print("⏳ Firebase snapshot retrieved: exists=${snapshot.exists}, value=${snapshot.value}");
+
+      if (!snapshot.exists || snapshot.value == null) {
+        print("⚠️ No saves found for ${dog.id}");
+        dogSaves[dog.id] = [];
+        return;
+      }
+
+      final rawData = Map<String, dynamic>.from(snapshot.value as Map);
+      print("📂 Raw data keys: ${rawData.keys}");
+
+      final savesList = rawData.entries.map((entry) {
+        final saveData = Map<String, dynamic>.from(entry.value);
+        final saveMap = {
+          "mood": saveData["mood"] ?? "",
+          "dateSave": saveData["dateSave"] ?? "",
+          "dogName": saveData["dogName"] ?? "",
+          "info": saveData["info"] ?? "",
+        };
+        print("📝 Parsed save: $saveMap");
+        return saveMap;
+      }).toList();
+
+      dogSaves[dog.id] = savesList;
+      print("✅ Loaded saves for ${dog.id}: ${dogSaves[dog.id]}");
+    } catch (e, stack) {
+      print("❌ Error fetching saves: $e");
+      print(stack);
+    }
+  }
 }

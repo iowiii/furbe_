@@ -1,11 +1,10 @@
 import 'dog.dart' as dog_model;
 
 class AppUser {
-  final String name;
+  String name;
   final String phone;
-  final String password;
+  String password;
   final Map<String, dog_model.Dog> dogs;
-
 
   AppUser({
     required this.name,
@@ -33,7 +32,6 @@ class AppUser {
       dogs: dogsMap,
     );
   }
-
 
   Map<String, dynamic> toMap() {
     return {

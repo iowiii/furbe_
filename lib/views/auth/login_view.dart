@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
+import '../../controllers/data_controller.dart';
 import '../../core/app_routes.dart';
 
 class LoginView extends StatefulWidget {
@@ -13,7 +13,7 @@ class LoginView extends StatefulWidget {
 class _LoginViewState extends State<LoginView> {
   final phoneCtrl = TextEditingController();
   final passCtrl = TextEditingController();
-  final auth = Get.find<AuthController>();
+  final auth = Get.find<DataController>();
 
   @override
   Widget build(BuildContext context) {
@@ -37,12 +37,11 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Phone Input
               TextField(
                 controller: phoneCtrl,
                 keyboardType: TextInputType.phone,
                 decoration: InputDecoration(
-                  hintText: 'Phone Number (+countrycode)',
+                  hintText: 'Phone Number (+countrycode) no space',
                   filled: true,
                   fillColor: Colors.grey[300],
                   border: OutlineInputBorder(
@@ -53,7 +52,6 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               const SizedBox(height: 16),
-              // Password Input
               TextField(
                 controller: passCtrl,
                 obscureText: true,
@@ -83,24 +81,21 @@ class _LoginViewState extends State<LoginView> {
                     final rawPhone = phoneCtrl.text.trim();
                     final password = passCtrl.text.trim();
 
+
                     if (rawPhone.isEmpty || password.isEmpty) {
                       Get.snackbar('Error', 'Phone number and password required');
                       return;
                     }
-
-
                     final snapshot = await auth.firebaseService.db.child('accounts/$rawPhone').get();
                     if (!snapshot.exists || snapshot.value == null) {
                       Get.snackbar('Error', 'Phone number not registered');
                       return;
                     }
-
                     final userMap = snapshot.value as Map;
                     if (userMap['password'] != password) {
                       Get.snackbar('Error', 'Incorrect password');
                       return;
                     }
-
                     await auth.login(rawPhone,password);
                     Get.offAllNamed(AppRoutes.main);
                   },

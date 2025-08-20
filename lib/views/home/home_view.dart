@@ -1,5 +1,7 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../../controllers/data_controller.dart';
 import '../../controllers/home_controller.dart';
 import 'package:camera/camera.dart';
 
@@ -13,29 +15,37 @@ class HomeView extends StatelessWidget {
       appBar: AppBar(
         toolbarHeight: 80.0,
         elevation: 0,
-        title: Row(
-          children: [
-            // sample profile pic
-            const CircleAvatar(
-             //HERE PROFILE? IDK
-              radius: 30.0,
-            ),
-            const SizedBox(width: 8),
-            Text("Riri", style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.black, // or any color you want
+        title: Obx(() {
+          final currentDog = Get.find<DataController>().currentDog.value;
+          return Row(
+            children: [
+              CircleAvatar(
+                radius: 30.0,
+                backgroundImage: currentDog != null && currentDog.photo.isNotEmpty
+                    ? MemoryImage(base64Decode(currentDog.photo))
+                    : null,
+                child: currentDog == null || currentDog.photo.isEmpty
+                    ? const Icon(Icons.pets, size: 30)
+                    : null,
               ),
-            ),
-          ],
-        ),
+              const SizedBox(width: 8),
+              Text(
+                currentDog?.name ?? 'No Dog',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          );
+        }),
       ),
 
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Start Scan button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE15C31),
@@ -43,12 +53,13 @@ class HomeView extends StatelessWidget {
                 padding: const EdgeInsets.all(40),
               ),
               onPressed: () async {
-                await Get.to(() => const StartScanPage());
+                final c = Get.find<HomeController>();
+                await Get.to(() => const StartScanPage(), arguments: {'autoSave': true});
               },
               child: const Icon(
                 Icons.videocam_outlined,
                 size: 40,
-                color: Colors.white, //makes icon white
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 8),
@@ -57,14 +68,12 @@ class HomeView extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.black, // or any color you want
+                color: Colors.black,
               ),
             ),
 
-            // Space between buttons
             const SizedBox(height: 130),
 
-            // Quick Scan button but still using the startScan button so this needed to be change
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFE15C31),
@@ -72,12 +81,13 @@ class HomeView extends StatelessWidget {
                 padding: const EdgeInsets.all(40),
               ),
               onPressed: () async {
-                await Get.to(() => const StartScanPage(quick: true));
+                final c = Get.find<HomeController>();
+                await Get.to(() => const StartScanPage(), arguments: {'autoSave': false});
               },
               child: const Icon(
                 Icons.flash_on,
                 size: 40,
-                color: Colors.white, //makes icon white
+                color: Colors.white,
               ),
             ),
             const SizedBox(height: 8),
@@ -86,10 +96,9 @@ class HomeView extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
-                color: Colors.black, // or any color you want
+                color: Colors.black,
               ),
             ),
-
           ],
         ),
       ),
@@ -107,11 +116,15 @@ class StartScanPage extends StatefulWidget {
 
 class _StartScanPageState extends State<StartScanPage> {
   final HomeController c = Get.find<HomeController>();
+  final DataController dataCtrl = Get.find<DataController>();
 
   @override
   void initState() {
     super.initState();
-    c.initCamera();
+
+    final args = Get.arguments as Map<String, dynamic>?;
+    final saveMode = args?['autoSave'] ?? false;
+    c.initCamera(saveMode: saveMode);
   }
 
   @override
@@ -127,7 +140,7 @@ class _StartScanPageState extends State<StartScanPage> {
       appBar: AppBar(
         elevation: 0,
         backgroundColor: Colors.black,
-        foregroundColor: Colors.orange.shade700, // back button color
+        foregroundColor: Colors.orange.shade700,
         title: Text(
           widget.quick ? "Quick Scan" : "Start Scan",
           style: const TextStyle(
@@ -136,16 +149,14 @@ class _StartScanPageState extends State<StartScanPage> {
           ),
         ),
       ),
-
       body: Center(
         child: Obx(() {
           if (!c.isCameraInitialized.value || c.cameraController == null) {
             return const CircularProgressIndicator();
           }
 
-          // Keep aspect ratio to prevent stretching
           return FittedBox(
-            fit: BoxFit.cover, // fills the whole screen
+            fit: BoxFit.cover,
             child: SizedBox(
               width: c.cameraController!.value.previewSize!.height,
               height: c.cameraController!.value.previewSize!.width,
@@ -154,11 +165,9 @@ class _StartScanPageState extends State<StartScanPage> {
           );
         }),
       ),
-
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Instruction text
           Padding(
             padding: const EdgeInsets.all(16.0),
             child: Text(
@@ -171,8 +180,6 @@ class _StartScanPageState extends State<StartScanPage> {
               textAlign: TextAlign.center,
             ),
           ),
-
-          // Result text if detected
           Obx(() {
             final mood = c.resultText.value;
             if (mood.isEmpty) return const SizedBox.shrink();
@@ -195,4 +202,3 @@ class _StartScanPageState extends State<StartScanPage> {
     );
   }
 }
-

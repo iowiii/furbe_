@@ -2,10 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
-import '../../models/dog.dart';
+import '../../controllers/data_controller.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 class RegisteredDogsView extends StatefulWidget {
   const RegisteredDogsView({super.key});
@@ -15,7 +13,7 @@ class RegisteredDogsView extends StatefulWidget {
 }
 
 class _RegisteredDogsViewState extends State<RegisteredDogsView> {
-  final auth = Get.find<AuthController>();
+  final auth = Get.find<DataController>();
   final ImagePicker _picker = ImagePicker();
   bool _picking = false;
   String? _dogGender;
@@ -26,7 +24,6 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
       return;
     }
 
-    // Step 1: Pick Image
     if (_picking) return;
     _picking = true;
     final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
@@ -83,7 +80,6 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
       Get.snackbar('Error', 'Failed to add dog: $e');
     }
   }
-
 
   @override
   Widget build(BuildContext context) {

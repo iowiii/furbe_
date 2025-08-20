@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/app_routes.dart';
-import '../../controllers/auth_controller.dart';
+import '../../controllers/data_controller.dart';
 
 class DogSetupPhotoView extends StatefulWidget {
   final String dogName;
@@ -19,7 +19,7 @@ class DogSetupPhotoView extends StatefulWidget {
 class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
   File? _dogImage;
   final ImagePicker _picker = ImagePicker();
-  final auth = Get.find<AuthController>();
+  final auth = Get.find<DataController>();
 
   Future<void> _takePhoto() async {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.camera);

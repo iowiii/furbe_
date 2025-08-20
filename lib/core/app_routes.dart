@@ -42,7 +42,7 @@ class AppRoutes {
     GetPage(name: dogSetupPhoto, page: () => const DogSetupPhotoView(dogName: '', dogGender: '')),
     GetPage(name: main, page: () => const MainView()),
     GetPage(name: analysis, page: () => const AnalysisView()),
-    GetPage(name: tips, page: () => const TipsView()),
+    GetPage(name: tips, page: () => TipsView()),
     GetPage(name: settings, page: () => const SettingsView()),
     GetPage(name: registerDogs, page: () => const RegisteredDogsView()),
   ];

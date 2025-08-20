@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../../controllers/auth_controller.dart';
+import '../../controllers/data_controller.dart';
 import '../../core/app_routes.dart';
 
 
@@ -14,7 +14,7 @@ class OtpVerificationView extends StatefulWidget {
 
 class _OtpVerificationViewState extends State<OtpVerificationView> {
   final otpControllers = List.generate(6, (_) => TextEditingController());
-  final auth = Get.find<AuthController>();
+  final auth = Get.find<DataController>();
   late String verificationId;
   late String phone;
 
@@ -33,15 +33,13 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
       Get.snackbar('Error', 'Please enter all 6 digits');
       return;
     }
-
-    if (verificationId == AuthController.devVerificationId &&
-        phone == AuthController.devPhone) {
+    if (verificationId == DataController.devVerificationId &&
+        phone == DataController.devPhone) {
       print("Dev login successful for $phone");
       auth.user.value = FirebaseAuth.instance.currentUser;
       Get.offAllNamed(AppRoutes.otpVerified);
       return;
     }
-
     final success = await auth.verifyOtp(verificationId, otp);
     if (success) {
       Get.offAllNamed(AppRoutes.otpVerified);
@@ -49,7 +47,6 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
       Get.snackbar('OTP Error', 'Verification failed');
     }
   }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(

@@ -15,8 +15,8 @@ class MainView extends StatelessWidget {
     final c = Get.put(MainController());
     final pages = [
       const HomeView(),
-      const SaveView(),
-      const TipsView(),
+      SaveView(),
+      TipsView(),
       const ProfileView(),
     ];
 
