@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -8,49 +10,41 @@ class MLKitService {
 
   MLKitService() {
     _imageLabeler = ImageLabeler(
-      options: ImageLabelerOptions(confidenceThreshold: 0.5),
+      options: LocalLabelerOptions(
+        modelPath: 'assets/models/model.tflite',
+        confidenceThreshold: 0.3, // adjust if needed
+      ),
     );
   }
 
   Future<List<ImageLabel>> processCameraImage(
-      CameraImage image,
-      InputImageRotation rotation,
-      ) async {
+      CameraImage cameraImage, InputImageRotation rotation) async {
     try {
-      // Merge all planes into a single byte array
       final WriteBuffer allBytes = WriteBuffer();
-      for (final Plane plane in image.planes) {
+      for (final Plane plane in cameraImage.planes) {
         allBytes.putUint8List(plane.bytes);
       }
-      final Uint8List bytes = allBytes.done().buffer.asUint8List();
+      final bytes = allBytes.done().buffer.asUint8List();
 
-      final Size imageSize = Size(
-        image.width.toDouble(),
-        image.height.toDouble(),
-      );
+      final Size imageSize =
+      Size(cameraImage.width.toDouble(), cameraImage.height.toDouble());
 
-      final InputImageFormat format =
-          InputImageFormatValue.fromRawValue(image.format.raw) ??
-              InputImageFormat.nv21;
-
-      // ✅ New metadata format — no planeData anymore
-      final InputImageMetadata metadata = InputImageMetadata(
+      // Create ML Kit metadata (old version)
+      final metadata = InputImageMetadata(
         size: imageSize,
         rotation: rotation,
-        format: format,
-        bytesPerRow: image.planes.first.bytesPerRow,
+        format: InputImageFormatValue.fromRawValue(cameraImage.format.raw) ??
+            InputImageFormat.nv21,
+        bytesPerRow: cameraImage.planes.first.bytesPerRow,
       );
 
-      final inputImage = InputImage.fromBytes(
-        bytes: bytes,
-        metadata: metadata,
-      );
+      final inputImage =
+      InputImage.fromBytes(bytes: bytes, metadata: metadata);
 
-      // Process image with ML Kit
       final labels = await _imageLabeler.processImage(inputImage);
       return labels;
     } catch (e) {
-      debugPrint("Error processing image: $e");
+      debugPrint("❌ Error processing camera image: $e");
       return [];
     }
   }

@@ -3,7 +3,7 @@ class Dog {
   final String name;
   final String gender;
   final String type;
-  final String info;
+  String info;
   final String photo;
 
   Dog({

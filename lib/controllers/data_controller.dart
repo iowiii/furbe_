@@ -281,6 +281,7 @@ class DataController extends GetxController {
     user.value = null;
     appUser.value = null;
     currentPhone = null;
+    currentDog.value = null;
     print("Logged out");
     Get.offAllNamed(AppRoutes.login);
   }

@@ -1,9 +1,10 @@
 import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/mlkit_service.dart';
-import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 import 'data_controller.dart';
 import 'package:intl/intl.dart';
+import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 
 class HomeController extends GetxController {
   final MLKitService mlKitService = MLKitService();
@@ -27,7 +28,7 @@ class HomeController extends GetxController {
     if (cameras != null && cameras!.isNotEmpty) {
       cameraController = CameraController(
         cameras!.first,
-        ResolutionPreset.medium,
+        ResolutionPreset.high,
         enableAudio: false,
       );
 
@@ -37,9 +38,7 @@ class HomeController extends GetxController {
       cameraController!.startImageStream((CameraImage image) {
         if (!_isProcessing) {
           _isProcessing = true;
-          processFrame(image).then((_) {
-            _isProcessing = false;
-          });
+          processFrame(image).then((_) => _isProcessing = false);
         }
       });
     } else {
@@ -48,32 +47,85 @@ class HomeController extends GetxController {
   }
 
   Future<void> processFrame(CameraImage cameraImage) async {
-    final rotation = InputImageRotationValue.fromRawValue(
-      cameras!.first.sensorOrientation,
-    ) ??
-        InputImageRotation.rotation0deg;
+    try {
+      final rotation = InputImageRotationValue.fromRawValue(
+        cameras!.first.sensorOrientation,
+      ) ?? InputImageRotation.rotation0deg;
 
-    final labels =
-    await mlKitService.processCameraImage(cameraImage, rotation);
+      final labels = await mlKitService.processCameraImage(cameraImage, rotation);
 
-    if (labels.isNotEmpty) {
-      final topLabel = labels.reduce(
-            (curr, next) => curr.confidence > next.confidence ? curr : next,
-      );
+      if (labels.isNotEmpty) {
+        // Sort by confidence descending
+        labels.sort((a, b) => b.confidence.compareTo(a.confidence));
 
-      resultText.value =
-      "${topLabel.label} (${(topLabel.confidence * 100).toStringAsFixed(1)}%)";
+        final topLabel = labels.first;
+        print("🔹 Top label: ${topLabel.label}, Confidence: ${topLabel.confidence}");
 
-      const allowedMoods = ['happy', 'sad', 'angry', 'scared'];
-
-      if (autoSave && !_hasSaved && allowedMoods.contains(topLabel.label.toLowerCase())) {
-        _saveResult(topLabel.label);
-        _hasSaved = true;
+        // Only show if top label is an allowed mood
+        const allowedMoods = ['happy', 'sad', 'angry', 'scared'];
+        if (allowedMoods.contains(topLabel.label.toLowerCase()) && !_hasSaved) {
+          resultText.value = topLabel.label;
+          _hasSaved = true;
+          print("✅ Mood detected: ${topLabel.label}");
+          Future.delayed(const Duration(seconds: 5), () {
+            showCapturePopup(topLabel.label);
+          });
+        } else {
+          resultText.value = "Position your dog";
+          print("⚠️ Top label not a mood or not allowed: ${topLabel.label}");
+        }
+      } else {
+        resultText.value = "No labels detected";
+        print("⚠️ No labels detected by ML Kit");
       }
-
-    } else {
-      resultText.value = "No mood detected";
+    } catch (e) {
+      debugPrint("❌ Error in processFrame: $e");
+      resultText.value = "Error detecting mood";
     }
+  }
+
+
+  void showCapturePopup(String mood) {
+    final dog = dataController.currentDog.value;
+    if (dog == null) return;
+
+    final dateNow = DateTime.now();
+
+    Get.dialog(
+      AlertDialog(
+        title: const Text("Dog Detected"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text("Name: ${dog.name}"),
+            Text("Mood: $mood"),
+            Text("Date: ${dateNow.toLocal().toString().split('.')[0]}"),
+            const SizedBox(height: 10),
+            TextField(
+              controller: TextEditingController(text: dog.info),
+              decoration: const InputDecoration(
+                labelText: 'Additional Info',
+                border: OutlineInputBorder(),
+              ),
+              onChanged: (val) => dog.info = val,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _saveResult(mood);
+              Get.back();
+            },
+            child: const Text("Save"),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _saveResult(String mood) async {
