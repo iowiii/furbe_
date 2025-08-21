@@ -124,7 +124,7 @@ class DataController extends GetxController {
   Future<void> addDog({
     required String name,
     required String gender,
-    required String type,
+    required String type,   // <-- breed is here as type
     required String info,
     required String photoPath,
   }) async {
@@ -146,7 +146,7 @@ class DataController extends GetxController {
       id: dogId,
       name: name,
       gender: gender,
-      type: type,
+      type: type,           // <-- you are correctly assigning breed here
       info: info,
       photo: photoBase64,
     );

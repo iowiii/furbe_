@@ -84,9 +84,34 @@ class _ProfileViewState extends State<ProfileView> {
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-              Text('Gender: ${dog.gender}'),
-              Text('Type: ${dog.type}'),
-              Text('Info: ${dog.info}'),
+              Container(
+                margin: const EdgeInsets.only(top: 24),
+                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Gender: ${dog.gender}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Breed: ${dog.type}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ],
           ),
         );

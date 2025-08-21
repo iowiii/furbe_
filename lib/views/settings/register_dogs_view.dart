@@ -16,7 +16,6 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
   final auth = Get.find<DataController>();
   final ImagePicker _picker = ImagePicker();
   bool _picking = false;
-  String? _dogGender;
 
   Future<void> _addDog() async {
     if (auth.currentPhone == null || auth.appUser.value == null) {
@@ -32,10 +31,13 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
 
     final dogNameController = TextEditingController();
     String? gender;
+    String? selectedBreed;
+
+    final breeds = ["Shih Tzu", "Pug", "Pomeranian"];
 
     final confirmed = await Get.dialog<bool>(
       Dialog(
-        backgroundColor: const Color(0xFFF4EDF4), // soft violet background
+        backgroundColor: const Color(0xFFF4EDF4),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -63,14 +65,14 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                     labelText: 'Dog Name',
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                    ), focusedBorder: OutlineInputBorder(
+                    ),
+                    focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: Color(
-                        0xFFE15C31),
-                    width: 2,
-                  ),
-                ),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE15C31),
+                        width: 2,
+                      ),
+                    ),
                     filled: true,
                     fillColor: Colors.white,
                   ),
@@ -86,8 +88,7 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: const BorderSide(
-                        color: Color(
-                            0xFFE15C31),
+                        color: Color(0xFFE15C31),
                         width: 2,
                       ),
                     ),
@@ -99,6 +100,34 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                     DropdownMenuItem(value: 'Female', child: Text('Female')),
                   ],
                   onChanged: (val) => gender = val,
+                ),
+                const SizedBox(height: 16),
+                DropdownButtonFormField<String>(
+                  value: selectedBreed,
+                  decoration: InputDecoration(
+                    labelText: 'Breed',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: const BorderSide(
+                        color: Color(0xFFE15C31),
+                        width: 2,
+                      ),
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                  ),
+                  items: breeds.map((breed) {
+                    return DropdownMenuItem(
+                      value: breed,
+                      child: Text(breed),
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    selectedBreed = val;
+                  },
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -120,7 +149,7 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                         ),
                         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       ),
-                      child: const Text('Add',style: TextStyle(color: Colors.white)),
+                      child: const Text('Add', style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -137,7 +166,7 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
       await auth.addDog(
         name: dogNameController.text.trim(),
         gender: gender ?? '',
-        type: 'unknown',
+        type: selectedBreed ?? 'unknown',
         info: '',
         photoPath: pickedFile.path,
       );
@@ -157,9 +186,6 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
         if (auth.currentPhone == null || auth.appUser.value == null) {
           return const Center(child: Text('Loading user...'));
         }
-        print('Current phone: ${auth.currentPhone}');
-        print('AppUser: ${auth.appUser.value}');
-
 
         final dogs = auth.userDogs;
 
@@ -181,7 +207,8 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                   children: const [
                     CircleAvatar(
                       radius: 50,
-                      child: Icon(Icons.add, size: 40),
+                      child: Icon(Icons.add, size: 40,color: Colors.white,),
+                      backgroundColor: Color(0xFFE15C31),
                     ),
                     SizedBox(height: 8),
                     Text('Add Dog'),
@@ -211,7 +238,7 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                       onPressed: () async {
                         final confirmed = await Get.dialog<bool>(
                           AlertDialog(
-                            title: const Text('Delete Dog' , style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                            title: const Text('Delete Dog', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                             content: Text('Are you sure you want to delete ${dog.name}?'),
                             actions: [
                               TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel', style: TextStyle(color: Color(0xFFE15C31)))),
@@ -232,7 +259,12 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                     ),
                   ],
                 ),
-                Text(dog.name),
+                const SizedBox(height: 4),
+                Text(dog.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  dog.type.isNotEmpty ? dog.type : 'Unknown breed',
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ],
             );
           },
