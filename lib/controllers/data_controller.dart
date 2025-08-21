@@ -273,6 +273,7 @@ class DataController extends GetxController {
   Future<void> deleteDog(String dogId) async {
     if (currentPhone == null) return;
     await firebaseService.deleteDog(currentPhone!, dogId, {});
+    currentDog.value = null;
     await loadAppUser(currentPhone!);
   }
 
