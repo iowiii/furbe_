@@ -14,3 +14,10 @@ A few resources to get you started if this is your first Flutter project:
 For help getting started with Flutter development, view the
 [online documentation](https://docs.flutter.dev/), which offers tutorials,
 samples, guidance on mobile development, and a full API reference.
+
+================ FUNCTIONAL REQUIREMENTS ================
+Login Screen
+- Users must be able to log in using valid credentials.
+- Invalid credentials must trigger an error message.
+- Successful login redirects to the Home Screen.
+

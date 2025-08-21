@@ -1,17 +1,14 @@
 import 'package:camera/camera.dart';
-import 'dart:typed_data';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../services/mlkit_service.dart';
+import '../services/tf_service.dart';
 import 'model_controller.dart';
 import 'data_controller.dart';
 import 'package:intl/intl.dart';
-import 'package:google_mlkit_image_labeling/google_mlkit_image_labeling.dart';
 
 
 class HomeController extends GetxController {
-  final MLKitService mlKitService = MLKitService();
+  final TFLiteService tfliteService = TFLiteService();
   final DataController dataController = Get.find<DataController>();
   final modelController = ModelController();
 
@@ -22,10 +19,10 @@ class HomeController extends GetxController {
 
   bool _isProcessing = false;
   bool _hasSaved = false;
-  bool autoSave = false;
+  bool _saveToDatabase = false;
 
   Future<void> initCamera({bool saveMode = false}) async {
-    autoSave = saveMode;
+    _saveToDatabase = saveMode;
     _hasSaved = false;
 
     cameras = await availableCameras();
@@ -33,7 +30,7 @@ class HomeController extends GetxController {
     if (cameras != null && cameras!.isNotEmpty) {
       cameraController = CameraController(
         cameras!.first,
-        ResolutionPreset.high,
+        ResolutionPreset.medium, // Reduced from high to medium for better FPS
         enableAudio: false,
       );
 
@@ -43,7 +40,12 @@ class HomeController extends GetxController {
       cameraController!.startImageStream((CameraImage image) {
         if (!_isProcessing) {
           _isProcessing = true;
-          processFrame(image).then((_) => _isProcessing = false);
+          processFrame(image).then((_) {
+            // Add delay to prevent buffer overflow and reduce GC pressure
+            Future.delayed(const Duration(milliseconds: 300), () {
+              _isProcessing = false;
+            });
+          });
         }
       });
     } else {
@@ -54,60 +56,32 @@ class HomeController extends GetxController {
   Future<void> processFrame(CameraImage cameraImage) async {
 
     try {
-      final rotation = InputImageRotationValue.fromRawValue(
-        cameras!.first.sensorOrientation,
-      ) ?? InputImageRotation.rotation0deg;
+      final results = await tfliteService.processCameraImage(cameraImage);
 
-      final labels = await mlKitService.processCameraImage(cameraImage, rotation);
+      if (results.isNotEmpty) {
+        results.sort((a, b) => b.confidence.compareTo(a.confidence));
+        final topResult = results.first;
+        print("🔹 Top result: ${topResult.label}, Confidence: ${topResult.confidence}");
 
-      if (labels.isNotEmpty) {
-        labels.sort((a, b) => b.confidence.compareTo(a.confidence));
-        final topLabel = labels.first;
-        print("🔹 Top label: ${topLabel.label}, Confidence: ${topLabel.confidence}");
+        final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
+        resultText.value = "$modeText ${topResult.label}";
+        print("Mood detected: ${topResult.label} (Save mode: $_saveToDatabase)");
 
-        if (topLabel.label.toLowerCase() == "dog") {
-          print("✅ Dog detected! Running TFLite model for mood...");
-
-          final bytes = _concatenatePlanes(cameraImage.planes);
-
-          final mood = await modelController.classify(bytes);
-
-          if (mood.isNotEmpty) {
-            resultText.value = mood;
-            print("✅ Mood detected: $mood");
-
-            if (!_hasSaved) {
-              _hasSaved = true;
-              Future.delayed(const Duration(seconds: 5), () {
-                showCapturePopup(mood);
-              });
-            }
-          } else {
-            resultText.value = "Mood unknown";
-            print("⚠️ TFLite model returned unknown mood");
-          }
-        } else {
-          resultText.value = "Position your dog";
-          print("⚠️ Top label not a dog: ${topLabel.label}");
+        if (_saveToDatabase && !_hasSaved) {
+          _hasSaved = true;
+          Future.delayed(const Duration(seconds: 5), () {
+            showCapturePopup(topResult.label);
+          });
         }
       } else {
-        resultText.value = "No labels detected";
-        print("⚠️ No labels detected by ML Kit");
+        resultText.value = "Position your dog";
+        print("No mood detected");
       }
     } catch (e) {
-      debugPrint("❌ Error in processFrame: $e");
+      debugPrint("Error in processFrame: $e");
       resultText.value = "Error detecting mood";
     }
   }
-
-  Uint8List _concatenatePlanes(List<Plane> planes) {
-    final WriteBuffer allBytes = WriteBuffer();
-    for (final plane in planes) {
-      allBytes.putUint8List(plane.bytes);
-    }
-    return allBytes.done().buffer.asUint8List();
-  }
-
 
 
   void showCapturePopup(String mood) {
@@ -173,7 +147,17 @@ class HomeController extends GetxController {
         .child('accounts/$userPhone/saves/${dog.id}/$saveId')
         .set(saveData);
 
-    print("✅ Saved scan: $saveData");
+    print("Saved scan: $saveData");
+  }
+
+  // Start Scan - detects mood and saves to database
+  Future<void> startScan() async {
+    await initCamera(saveMode: true);
+  }
+
+  // Quick Scan - detects mood only, no saving
+  Future<void> quickScan() async {
+    await initCamera(saveMode: false);
   }
 
   Future<void> disposeCamera() async {
@@ -185,7 +169,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     disposeCamera();
-    mlKitService.dispose();
+    tfliteService.dispose();
     super.onClose();
   }
 }
