@@ -16,10 +16,16 @@ class HomeController extends GetxController {
   List<CameraDescription>? cameras;
   RxBool isCameraInitialized = false.obs;
   RxString resultText = "".obs;
+  RxString fpsText = "FPS: 0".obs;
 
   bool _isProcessing = false;
   bool _hasSaved = false;
   bool _saveToDatabase = false;
+  
+  // FPS tracking
+  DateTime? _lastFrameTime;
+  int _frameCount = 0;
+  double _currentFps = 0.0;
 
   Future<void> initCamera({bool saveMode = false}) async {
     _saveToDatabase = saveMode;
@@ -54,6 +60,8 @@ class HomeController extends GetxController {
   }
 
   Future<void> processFrame(CameraImage cameraImage) async {
+    // Calculate FPS
+    _updateFPS();
 
     try {
       final results = await tfliteService.processCameraImage(cameraImage);
@@ -61,10 +69,11 @@ class HomeController extends GetxController {
       if (results.isNotEmpty) {
         results.sort((a, b) => b.confidence.compareTo(a.confidence));
         final topResult = results.first;
-        print("🔹 Top result: ${topResult.label}, Confidence: ${topResult.confidence}");
+        print("Top result: ${topResult.label}, Confidence: ${topResult.confidence}");
 
         final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
         resultText.value = "$modeText ${topResult.label}";
+        fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
         print("Mood detected: ${topResult.label} (Save mode: $_saveToDatabase)");
 
         if (_saveToDatabase && !_hasSaved) {
@@ -160,10 +169,29 @@ class HomeController extends GetxController {
     await initCamera(saveMode: false);
   }
 
+  void _updateFPS() {
+    final now = DateTime.now();
+    if (_lastFrameTime != null) {
+      final timeDiff = now.difference(_lastFrameTime!).inMilliseconds;
+      if (timeDiff > 0) {
+        _currentFps = 1000.0 / timeDiff;
+        _frameCount++;
+        
+        // Update FPS display every 10 frames
+        if (_frameCount % 10 == 0) {
+          fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
+        }
+      }
+    }
+    _lastFrameTime = now;
+  }
+
   Future<void> disposeCamera() async {
     await cameraController?.stopImageStream();
     await cameraController?.dispose();
     isCameraInitialized.value = false;
+    _lastFrameTime = null;
+    _frameCount = 0;
   }
 
   @override

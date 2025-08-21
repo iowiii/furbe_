@@ -15,28 +15,34 @@ class ModelController {
 
   Future<void> loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('your_model.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/models/dog_mood_classifier_finetuned.tflite');
       _isModelLoaded = true;
     } catch (e) {
       print('Error loading model: $e');
     }
   }
 
-  Uint8List preprocess(Uint8List imageBytes) {
+  List<List<List<List<double>>>> preprocess(Uint8List imageBytes) {
     final image = img.decodeImage(imageBytes);
     final resized = img.copyResize(image!, width: inputSize, height: inputSize);
 
-    final input = Float32List(inputSize * inputSize * 3);
-    int index = 0;
-    for (int y = 0; y < inputSize; y++) {
-      for (int x = 0; x < inputSize; x++) {
-        final pixel = resized.getPixel(x, y);
-        input[index++] = pixel.r / 255.0;
-        input[index++] = pixel.g / 255.0;
-        input[index++] = pixel.b / 255.0;
-      }
-    }
-    return input.buffer.asUint8List();
+    // Create 4D tensor [1, 224, 224, 3]
+    final input = List.generate(1, (_) => 
+      List.generate(inputSize, (y) => 
+        List.generate(inputSize, (x) => 
+          List.generate(3, (c) {
+            final pixel = resized.getPixel(x, y);
+            switch (c) {
+              case 0: return pixel.r / 255.0;
+              case 1: return pixel.g / 255.0;
+              case 2: return pixel.b / 255.0;
+              default: return 0.0;
+            }
+          })
+        )
+      )
+    );
+    return input;
   }
 
   Future<String> classify(Uint8List imageBytes) async {
@@ -46,10 +52,12 @@ class ModelController {
     }
     try {
       final input = preprocess(imageBytes);
-      final output = List.filled(12, 0.0).reshape([1, 12]);
+      // Create 2D output tensor [1, 12]
+      final output = List.generate(1, (_) => List.filled(12, 0.0));
+      
       _interpreter.run(input, output);
 
-      final prediction = output[0] as List<double>;
+      final prediction = output[0];
       final maxIndex = prediction.indexWhere(
             (e) => e == prediction.reduce((a, b) => a > b ? a : b),
       );

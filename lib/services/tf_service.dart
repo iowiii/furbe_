@@ -24,21 +24,38 @@ class TFLiteService {
 
   Future<void> _loadModel() async {
     try {
-      _interpreter =
-      await Interpreter.fromAsset('assets/models/dog_mood_classifier_finetuned.tflite');
+      _interpreter = await Interpreter.fromAsset(
+        'assets/models/dog_mood_classifier_finetuned.tflite',
+      );
+
       _labels = [
         'shih_tzu_happy', 'shih_tzu_sad', 'shih_tzu_angry', 'shih_tzu_scared',
         'pug_happy', 'pug_sad', 'pug_angry', 'pug_scared',
         'pomeranian_happy', 'pomeranian_sad', 'pomeranian_angry', 'pomeranian_scared'
       ];
+
+      print("✅ Model loaded successfully");
+
+      // 🔎 Print Input Tensor details
+      final inputs = _interpreter!.getInputTensors();
+      for (var i = 0; i < inputs.length; i++) {
+        print("👉 Input[$i] shape: ${inputs[i].shape}, type: ${inputs[i].type}");
+      }
+
+      // 🔎 Print Output Tensor details
+      final outputs = _interpreter!.getOutputTensors();
+      for (var i = 0; i < outputs.length; i++) {
+        print("👉 Output[$i] shape: ${outputs[i].shape}, type: ${outputs[i].type}");
+      }
+
     } catch (e) {
-      debugPrint('Error loading model: $e');
+      print('❌ Error loading model: $e');
     }
   }
 
   Future<List<TFLiteResult>> processCameraImage(CameraImage image) async {
     if (_interpreter == null) return [];
-    
+
     // Skip frames for better FPS
     _frameCount++;
     if (_frameCount % _skipFrames != 0) return [];
@@ -46,37 +63,40 @@ class TFLiteService {
     try {
       final img.Image rgbImage = _yuv420ToImage(image);
       final img.Image resized = img.copyResize(rgbImage, width: 224, height: 224);
-      
-      // Create flat input tensor
-      final input = Float32List(224 * 224 * 3);
-      int pixelIndex = 0;
-      
-      for (int y = 0; y < 224; y++) {
-        for (int x = 0; x < 224; x++) {
-          final pixel = resized.getPixel(x, y);
-          input[pixelIndex++] = pixel.r  / 255.0;
-          input[pixelIndex++] = pixel.g  / 255.0;
-          input[pixelIndex++] = pixel.b  / 255.0;
-        }
-      }
-      
-      final output = Float32List(_labels.length);
-      final reshapedInput = input.reshape([1, 224, 224, 3]);
-      final reshapedOutput = output.reshape([1, _labels.length]);
 
-      _interpreter!.run(reshapedInput, reshapedOutput);
+      // Create 4D input tensor [1, 224, 224, 3]
+      final input = List.generate(1, (_) => 
+        List.generate(224, (y) => 
+          List.generate(224, (x) => 
+            List.generate(3, (c) {
+              final pixel = resized.getPixel(x, y);
+              switch (c) {
+                case 0: return pixel.r / 255.0;
+                case 1: return pixel.g / 255.0;
+                case 2: return pixel.b / 255.0;
+                default: return 0.0;
+              }
+            })
+          )
+        )
+      );
 
+      // Create 2D output tensor [1, 12]
+      final output = List.generate(1, (_) => List.filled(12, 0.0));
+
+      _interpreter!.run(input, output);
 
       final results = <TFLiteResult>[];
+      final prediction = output[0];
       for (int i = 0; i < _labels.length; i++) {
-        if (output[i] > 0.3) {
-          results.add(TFLiteResult(_labels[i], output[i]));
+        if (prediction[i] > 0.3) {
+          results.add(TFLiteResult(_labels[i], prediction[i]));
         }
       }
 
       return results;
     } catch (e) {
-      debugPrint("Error processing image: $e");
+      print("❌ Error processing image: $e");
       return [];
     }
   }
@@ -113,8 +133,6 @@ class TFLiteService {
 
     return imgImage;
   }
-
-
 
   void dispose() {
     _interpreter?.close();

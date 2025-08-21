@@ -19,7 +19,7 @@ class FirebaseService {
     try {
       await _db.child('mood_entries').push().set(data);
     } catch (e) {
-      // ignore errors - best effort
+
     }
   }
   Future<void> setUserDog(String uid, String dogId, Map<String, dynamic> dogJson) async {

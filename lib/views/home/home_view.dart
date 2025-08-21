@@ -155,13 +155,36 @@ class _StartScanPageState extends State<StartScanPage> {
             return const CircularProgressIndicator();
           }
 
-          return FittedBox(
-            fit: BoxFit.cover,
-            child: SizedBox(
-              width: c.cameraController!.value.previewSize!.height,
-              height: c.cameraController!.value.previewSize!.width,
-              child: CameraPreview(c.cameraController!),
-            ),
+          return Stack(
+            children: [
+              FittedBox(
+                fit: BoxFit.cover,
+                child: SizedBox(
+                  width: c.cameraController!.value.previewSize!.height,
+                  height: c.cameraController!.value.previewSize!.width,
+                  child: CameraPreview(c.cameraController!),
+                ),
+              ),
+              Positioned(
+                top: 16,
+                right: 16,
+                child: Obx(() => Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    c.fpsText.value,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )),
+              ),
+            ],
           );
         }),
       ),
