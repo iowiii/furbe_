@@ -95,6 +95,8 @@ class _LoginViewState extends State<LoginView> {
                     ),
                   ),
                   onPressed: () async {
+                    FocusScope.of(context).unfocus();
+
                     final rawPhone = phoneCtrl.text.trim();
                     final password = passCtrl.text.trim();
 

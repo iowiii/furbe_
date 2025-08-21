@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'dog_setup_photo_view.dart';
+import 'dog_setup_breed_view.dart';
 
 class DogSetupGenderView extends StatefulWidget {
   final String dogName;
@@ -52,7 +52,7 @@ class _DogSetupGenderViewState extends State<DogSetupGenderView> {
                 ),
                 onPressed: gender == null
                     ? null
-                    : () => Get.to(() => DogSetupPhotoView(
+                    : () => Get.to(() => DogSetupBreedView(
                   dogName: widget.dogName,
                   dogGender: gender!,
                 )),

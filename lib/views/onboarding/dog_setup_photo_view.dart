@@ -10,11 +10,19 @@ import '../../controllers/data_controller.dart';
 class DogSetupPhotoView extends StatefulWidget {
   final String dogName;
   final String dogGender;
-  const DogSetupPhotoView({super.key, required this.dogName, required this.dogGender});
+  final String dogBreed;
+
+  const DogSetupPhotoView({
+    super.key,
+    required this.dogName,
+    required this.dogGender,
+    required this.dogBreed,
+  });
 
   @override
   State<DogSetupPhotoView> createState() => _DogSetupPhotoViewState();
 }
+
 
 class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
   File? _dogImage;
@@ -58,11 +66,10 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
       await auth.addDog(
         name: widget.dogName,
         gender: widget.dogGender,
-        type: 'unknown',
+        type: widget.dogBreed,
         info: '',
         photoPath: _dogImage?.path ?? '',
       );
-
 
       if (auth.currentPhone != null) {
         await auth.loadAppUser(auth.currentPhone!);
