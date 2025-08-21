@@ -55,10 +55,6 @@ class SettingsView extends StatelessWidget {
                 AlertDialog(
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
-                    side: const BorderSide(
-                      color: Color(0xFFE15C31),
-                      width: 2,
-                    ),
                   ),
                   title: const Text(
                     "Logout",

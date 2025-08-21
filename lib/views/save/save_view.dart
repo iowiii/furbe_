@@ -159,7 +159,7 @@ class _SaveViewState extends State<SaveView> {
                       color: bgColor ?? Colors.white,
                       shape: BoxShape.circle,
                       border: isToday
-                          ? Border.all(color: Colors.black54, width: 2)
+                          ? Border.all(color: Color(0xFFE15C31), width: 2)
                           : null,
                     ),
                     alignment: Alignment.center,

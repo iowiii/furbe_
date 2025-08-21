@@ -89,6 +89,7 @@ class _RegisterViewState extends State<RegisterView> {
                               : const Text(
                             "Sign up",
                             style: TextStyle(
+                              color: Colors.white,
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                             ),
