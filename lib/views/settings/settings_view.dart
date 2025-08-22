@@ -8,7 +8,6 @@ class SettingsView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final auth = Get.find<DataController>();
 
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),

@@ -2,12 +2,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/tf_service.dart';
-import '../services/inference_service.dart';
 import 'model_controller.dart';
 import 'data_controller.dart';
 import 'package:intl/intl.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 
 
 class HomeController extends GetxController {

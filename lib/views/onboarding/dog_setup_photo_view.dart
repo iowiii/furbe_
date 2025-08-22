@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'dart:convert';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -60,9 +59,6 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
     }
 
     try {
-      final bytes = await File(_dogImage!.path).readAsBytes();
-      final base64Image = base64Encode(bytes);
-
       await auth.addDog(
         name: widget.dogName,
         gender: widget.dogGender,
