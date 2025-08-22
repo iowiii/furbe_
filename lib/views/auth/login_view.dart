@@ -24,7 +24,7 @@ class _LoginViewState extends State<LoginView> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 60),
+              const SizedBox(height: 80),
               // Logo
               Center(
                 child: Image.asset(
@@ -32,7 +32,7 @@ class _LoginViewState extends State<LoginView> {
                   height: 80,
                 ),
               ),
-              const SizedBox(height: 40),
+              const SizedBox(height: 90),
 
               // Title
               const Align(
