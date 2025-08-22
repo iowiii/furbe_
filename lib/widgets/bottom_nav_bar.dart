@@ -21,7 +21,7 @@ class BottomNavBar extends StatelessWidget {
         unselectedLabelStyle: const TextStyle(fontSize: 12),
         items: [
           _buildNavItem(Icons.home_outlined, "Home", 0, c),
-          _buildNavItem(Icons.analytics, "Analysis", 1, c),
+          _buildNavItem(Icons.analytics, "History", 1, c),
           _buildNavItem(Icons.screen_search_desktop_outlined, "Articles", 2, c),
           _buildNavItem(Icons.pets, "Profile", 3, c),
         ],

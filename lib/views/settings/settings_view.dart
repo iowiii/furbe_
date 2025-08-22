@@ -27,10 +27,12 @@ class SettingsView extends StatelessWidget {
               Get.dialog(
                 AlertDialog(
                   title: const Text("Data Privacy"),
-                  content: const Text(
-                    "We respect your privacy. All data collected by this app "
-                    "is stored securely and only used to improve your experience. "
-                    "You can manage, edit, or delete your account data at any time.",
+                  content: const SingleChildScrollView(
+                    child: Text(
+                      "We respect your privacy. All data collected by this app "
+                      "is stored securely and only used to improve your experience. "
+                      "You can manage, edit, or delete your account data at any time.",
+                    ),
                   ),
                   actions: [
                     TextButton(

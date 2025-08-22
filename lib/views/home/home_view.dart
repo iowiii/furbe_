@@ -29,12 +29,15 @@ class HomeView extends StatelessWidget {
                     : null,
               ),
               const SizedBox(width: 8),
-              Text(
-                currentDog?.name ?? 'No Dog',
-                style: const TextStyle(
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+              Expanded(
+                child: Text(
+                  currentDog?.name ?? 'No Dog',
+                  style: const TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -74,6 +77,7 @@ class HomeView extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
+              textAlign: TextAlign.center,
             ),
 
             const SizedBox(height: 130),
@@ -102,6 +106,7 @@ class HomeView extends StatelessWidget {
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -195,7 +200,7 @@ class _StartScanPageState extends State<StartScanPage> {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
+          Container(
             padding: const EdgeInsets.all(16.0),
             child: Text(
               "Position your dog within the frame",
@@ -205,6 +210,7 @@ class _StartScanPageState extends State<StartScanPage> {
                 fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
+              overflow: TextOverflow.visible,
             ),
           ),
           Obx(() {
@@ -213,14 +219,17 @@ class _StartScanPageState extends State<StartScanPage> {
             return Container(
               color: Colors.green,
               padding: const EdgeInsets.all(16),
+              width: double.infinity,
               child: Text(
                 mood,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 22,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             );
           }),

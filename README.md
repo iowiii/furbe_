@@ -21,3 +21,27 @@ Login Screen
 - Invalid credentials must trigger an error message.
 - Successful login redirects to the Home Screen.
 
+Dog Registration
+- Users can add dog pictures from camera or gallery
+- AI automatically detects dog breed using dog_classification.tflite
+- Users can manually override detected breed
+
+Mood Detection
+- Real-time mood detection using dog_mood_classifier_finetuned.tflite
+- Start Scan button disabled when no dog is registered
+
+================ SETUP INSTRUCTIONS ================
+1. Install Python dependencies:
+   pip install -r requirements.txt
+
+2. Start the inference server:
+   Run start_inference_server.bat or:
+   cd lib/services && python inference_server.py
+
+3. Ensure TFLite models are in assets/models/:
+   - dog_classification.tflite
+   - dog_mood_classifier_finetuned.tflite
+
+4. Run the Flutter app:
+   flutter run
+

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/data_controller.dart';
+import '../../services/inference_service.dart';
 import 'package:image_picker/image_picker.dart';
 
 class RegisteredDogsView extends StatefulWidget {
@@ -24,16 +25,57 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
     }
 
     if (_picking) return;
+    
+    // Show image source selection dialog
+    final imageSource = await Get.dialog<ImageSource>(
+      AlertDialog(
+        title: const Text('Select Image Source'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text('Camera'),
+              onTap: () => Get.back(result: ImageSource.camera),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text('Gallery'),
+              onTap: () => Get.back(result: ImageSource.gallery),
+            ),
+          ],
+        ),
+      ),
+    );
+    
+    if (imageSource == null) return;
+    
     _picking = true;
-    final pickedFile = await _picker.pickImage(source: ImageSource.gallery);
+    var pickedFile = await _picker.pickImage(source: imageSource);
     _picking = false;
     if (pickedFile == null) return;
 
+    await _showDogDialog(pickedFile);
+  }
+
+  Future<void> _showDogDialog(XFile initialFile) async {
+    var pickedFile = initialFile;
     final dogNameController = TextEditingController();
     String? gender;
     String? selectedBreed;
+    String detectedBreed = "Detecting...";
 
     final breeds = ["Shih Tzu", "Pug", "Pomeranian"];
+    
+    // Detect breed using AI
+    try {
+      final result = await InferenceService.detectBreed(pickedFile.path);
+      detectedBreed = '${result['label']} (${(result['confidence'] * 100).toStringAsFixed(1)}%)';
+      selectedBreed = result['label'];
+    } catch (e) {
+      detectedBreed = "Detection failed";
+      // Don't auto-set selectedBreed, let user choose
+    }
 
     final confirmed = await Get.dialog<bool>(
       Dialog(
@@ -54,9 +96,85 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                CircleAvatar(
-                  radius: 50,
-                  backgroundImage: FileImage(File(pickedFile.path)),
+                StatefulBuilder(
+                  builder: (context, setDialogState) => GestureDetector(
+                    onTap: () async {
+                      final newSource = await Get.dialog<ImageSource>(
+                        AlertDialog(
+                          title: const Text('Change Photo'),
+                          content: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(
+                                leading: const Icon(Icons.camera_alt),
+                                title: const Text('Camera'),
+                                onTap: () => Get.back(result: ImageSource.camera),
+                              ),
+                              ListTile(
+                                leading: const Icon(Icons.photo_library),
+                                title: const Text('Gallery'),
+                                onTap: () => Get.back(result: ImageSource.gallery),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                      if (newSource != null) {
+                        final newFile = await _picker.pickImage(source: newSource);
+                        if (newFile != null) {
+                          pickedFile = newFile;
+                          try {
+                            final result = await InferenceService.detectBreed(pickedFile.path);
+                            detectedBreed = '${result['label']} (${(result['confidence'] * 100).toStringAsFixed(1)}%)';
+                            selectedBreed = result['label'];
+                          } catch (e) {
+                            detectedBreed = "Detection failed";
+                          }
+                          setDialogState(() {});
+                        }
+                      }
+                    },
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundImage: FileImage(File(pickedFile.path)),
+                        ),
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFE15C31),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.edit,
+                              color: Colors.white,
+                              size: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                StatefulBuilder(
+                  builder: (context, setTextState) => Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Text(
+                      'Detected: $detectedBreed',
+                      style: const TextStyle(
+                        fontSize: 14,
+                        color: Color(0xFFE15C31),
+                        fontWeight: FontWeight.w500,
+                      ),
+                      textAlign: TextAlign.center,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ),
                 const SizedBox(height: 20),
                 TextField(
@@ -102,32 +220,36 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                   onChanged: (val) => gender = val,
                 ),
                 const SizedBox(height: 16),
-                DropdownButtonFormField<String>(
-                  value: selectedBreed,
-                  decoration: InputDecoration(
-                    labelText: 'Breed',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFFE15C31),
-                        width: 2,
+                StatefulBuilder(
+                  builder: (context, setState) => DropdownButtonFormField<String>(
+                    value: selectedBreed,
+                    decoration: InputDecoration(
+                      labelText: 'Breed (AI Detected)',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(
+                          color: Color(0xFFE15C31),
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
-                    filled: true,
-                    fillColor: Colors.white,
+                    items: breeds.map((breed) {
+                      return DropdownMenuItem(
+                        value: breed,
+                        child: Text(breed),
+                      );
+                    }).toList(),
+                    onChanged: (val) {
+                      setState(() {
+                        selectedBreed = val;
+                      });
+                    },
                   ),
-                  items: breeds.map((breed) {
-                    return DropdownMenuItem(
-                      value: breed,
-                      child: Text(breed),
-                    );
-                  }).toList(),
-                  onChanged: (val) {
-                    selectedBreed = val;
-                  },
                 ),
                 const SizedBox(height: 24),
                 Row(
@@ -166,7 +288,7 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
       await auth.addDog(
         name: dogNameController.text.trim(),
         gender: gender ?? '',
-        type: selectedBreed ?? 'unknown',
+        type: selectedBreed ?? breeds.first,
         info: '',
         photoPath: pickedFile.path,
       );
@@ -260,10 +382,17 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                Text(dog.name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  dog.name,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                ),
                 Text(
                   dog.type.isNotEmpty ? dog.type : 'Unknown breed',
                   style: const TextStyle(color: Colors.grey),
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
                 ),
               ],
             );

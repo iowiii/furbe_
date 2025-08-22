@@ -2,9 +2,12 @@ import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/tf_service.dart';
+import '../services/inference_service.dart';
 import 'model_controller.dart';
 import 'data_controller.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'package:path_provider/path_provider.dart';
 
 
 class HomeController extends GetxController {
@@ -69,22 +72,31 @@ class HomeController extends GetxController {
       if (results.isNotEmpty) {
         results.sort((a, b) => b.confidence.compareTo(a.confidence));
         final topResult = results.first;
-        print("Top result: ${topResult.label}, Confidence: ${topResult.confidence}");
-
-        final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
-        resultText.value = "$modeText ${topResult.label}";
-        fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
-        print("Mood detected: ${topResult.label} (Save mode: $_saveToDatabase)");
-
-        if (_saveToDatabase && !_hasSaved) {
-          _hasSaved = true;
-          Future.delayed(const Duration(seconds: 5), () {
-            showCapturePopup(topResult.label);
-          });
+        
+        // Only show results with 70% or higher confidence
+        if (topResult.confidence >= 0.7) {
+          final dog = dataController.currentDog.value;
+          final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
+          
+          if (_saveToDatabase && dog != null) {
+            resultText.value = "$modeText ${topResult.label} - ${dog.type}";
+          } else {
+            resultText.value = "$modeText ${topResult.label}";
+          }
+          
+          fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
+          
+          if (_saveToDatabase && !_hasSaved) {
+            _hasSaved = true;
+            Future.delayed(const Duration(seconds: 3), () {
+              showCapturePopup(topResult.label);
+            });
+          }
+        } else {
+          resultText.value = "Detecting dog mood (${(topResult.confidence * 100).toInt()}%)";
         }
       } else {
         resultText.value = "Position your dog";
-        print("No mood detected");
       }
     } catch (e) {
       debugPrint("Error in processFrame: $e");
@@ -98,26 +110,35 @@ class HomeController extends GetxController {
     if (dog == null) return;
 
     final dateNow = DateTime.now();
+    final infoController = TextEditingController(text: dog.info);
 
     Get.dialog(
       AlertDialog(
         title: const Text("Dog Detected"),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text("Name: ${dog.name}"),
-            Text("Mood: $mood"),
-            Text("Date: ${dateNow.toLocal().toString().split('.')[0]}"),
-            const SizedBox(height: 10),
-            TextField(
-              controller: TextEditingController(text: dog.info),
-              decoration: const InputDecoration(
-                labelText: 'Additional Info',
-                border: OutlineInputBorder(),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Name: ${dog.name}", overflow: TextOverflow.ellipsis),
+              Text("Breed: ${dog.type}", overflow: TextOverflow.ellipsis),
+              Text("Mood: $mood", overflow: TextOverflow.ellipsis),
+              Text(
+                "Date: ${DateFormat('MMM dd, yyyy HH:mm').format(dateNow)}",
+                overflow: TextOverflow.ellipsis,
               ),
-              onChanged: (val) => dog.info = val,
-            ),
-          ],
+              const SizedBox(height: 10),
+              TextField(
+                controller: infoController,
+                decoration: const InputDecoration(
+                  labelText: 'Additional Info',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 2,
+                onChanged: (val) => dog.info = val,
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(

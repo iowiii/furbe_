@@ -19,11 +19,12 @@ class _LoginViewState extends State<LoginView> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
               const SizedBox(height: 80),
               // Logo
               Center(
@@ -132,7 +133,7 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
               ),
-              const Spacer(),
+              SizedBox(height: MediaQuery.of(context).size.height * 0.2),
 
               // Bottom Sign Up
               Padding(
@@ -155,6 +156,7 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
             ],
+            ),
           ),
         ),
       ),
