@@ -78,7 +78,7 @@ class _SaveViewState extends State<SaveView> {
             // Month navigation
             Container(
               padding: const EdgeInsets.symmetric(vertical: 8),
-              color: Colors.grey.shade200,
+              color: Color(0xFFE15C31),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [

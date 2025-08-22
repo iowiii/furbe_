@@ -83,12 +83,12 @@ class _ProfileViewState extends State<ProfileView> {
                 dog.name,
                 style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Container(
                 margin: const EdgeInsets.only(top: 24),
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 24),
+                padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 50),
                 decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
+                  color: Colors.grey.shade200,
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Column(

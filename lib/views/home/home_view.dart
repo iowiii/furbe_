@@ -46,22 +46,26 @@ class HomeView extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFE15C31),
-                shape: const CircleBorder(),
-                padding: const EdgeInsets.all(40),
-              ),
-              onPressed: () async {
-                final c = Get.find<HomeController>();
-                await Get.to(() => const StartScanPage(), arguments: {'autoSave': true});
-              },
-              child: const Icon(
-                Icons.videocam_outlined,
-                size: 40,
-                color: Colors.white,
-              ),
-            ),
+            Obx(() {
+              final currentDog = Get.find<DataController>().currentDog.value;
+              final hasRegisteredDog = currentDog != null;
+              
+              return ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: hasRegisteredDog ? const Color(0xFFE15C31) : Colors.grey,
+                  shape: const CircleBorder(),
+                  padding: const EdgeInsets.all(40),
+                ),
+                onPressed: hasRegisteredDog ? () async {
+                  await Get.to(() => const StartScanPage(), arguments: {'autoSave': true});
+                } : null,
+                child: Icon(
+                  Icons.videocam_outlined,
+                  size: 40,
+                  color: hasRegisteredDog ? Colors.white : Colors.white54,
+                ),
+              );
+            }),
             const SizedBox(height: 8),
             const Text(
               "Start Scan",
