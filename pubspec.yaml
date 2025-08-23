@@ -33,6 +33,7 @@ dependencies:
   get: ^4.6.6
   json_annotation: ^4.9.0
   tflite_flutter: ^0.11.0
+  showcaseview: ^2.1.1
 
 dev_dependencies:
   flutter_test:
