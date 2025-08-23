@@ -18,13 +18,13 @@ class _LoginViewState extends State<LoginView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true, // ensures UI shifts when keyboard appears
       body: SafeArea(
         child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
+          padding: const EdgeInsets.symmetric(horizontal: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
               const SizedBox(height: 80),
               // Logo
               Center(
@@ -60,8 +60,8 @@ class _LoginViewState extends State<LoginView> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding:
-                  const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16, horizontal: 12),
                 ),
               ),
               const SizedBox(height: 16),
@@ -78,8 +78,8 @@ class _LoginViewState extends State<LoginView> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding:
-                  const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: 16, horizontal: 12),
                 ),
               ),
               const SizedBox(height: 28),
@@ -89,7 +89,7 @@ class _LoginViewState extends State<LoginView> {
                 width: double.infinity,
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Color(0xFFE15C31),
+                    backgroundColor: const Color(0xFFE15C31),
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
@@ -102,7 +102,8 @@ class _LoginViewState extends State<LoginView> {
                     final password = passCtrl.text.trim();
 
                     if (rawPhone.isEmpty || password.isEmpty) {
-                      Get.snackbar('Error', 'Phone number and password required');
+                      Get.snackbar(
+                          'Error', 'Phone number and password required');
                       return;
                     }
 
@@ -133,31 +134,30 @@ class _LoginViewState extends State<LoginView> {
                   ),
                 ),
               ),
-              SizedBox(height: MediaQuery.of(context).size.height * 0.2),
+              const SizedBox(height: 80),
+            ],
+          ),
+        ),
+      ),
 
-              // Bottom Sign Up
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text("Don’t have an account? "),
-                    GestureDetector(
-                      onTap: () => Get.toNamed(AppRoutes.register),
-                      child: const Text(
-                        'Sign up',
-                        style: TextStyle(
-                          color: Colors.blue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
+      // 👇 This part stays pinned at bottom & moves above keyboard
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.only(bottom: 24),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Text("Don’t have an account? "),
+            GestureDetector(
+              onTap: () => Get.toNamed(AppRoutes.register),
+              child: const Text(
+                'Sign up',
+                style: TextStyle(
+                  color: Colors.blue,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
-            ],
             ),
-          ),
+          ],
         ),
       ),
     );

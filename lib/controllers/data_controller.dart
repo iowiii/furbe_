@@ -79,6 +79,31 @@ class DataController extends GetxController {
     _saveSession();
   }
 
+  Future<void> updateDog(dog_model.Dog dog) async {
+    if (currentPhone == null) {
+      Get.snackbar('Error', 'User not logged in');
+      return;
+    }
+
+    try {
+      // ✅ Save to Firebase
+      await firebaseService.db
+          .child('accounts/$currentPhone/dogs/${dog.id}')
+          .set(dog.toMap());
+
+      // ✅ Reload user so appUser + currentDog are fresh
+      await loadAppUser(currentPhone!);
+
+      // ✅ Set currentDog to updated one
+      currentDog.value = appUser.value?.dogs[dog.id];
+
+      Get.snackbar('Success', 'Dog updated successfully');
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update dog: $e');
+    }
+  }
+
+
   Future<void> login(String phone, String? password) async {
     phone = phone.replaceAll(' ', '');
     if (phone.isEmpty) {

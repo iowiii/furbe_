@@ -22,8 +22,7 @@ class BottomNavBar extends StatelessWidget {
         items: [
           _buildNavItem(Icons.home_outlined, "Home", 0, c),
           _buildNavItem(Icons.analytics, "History", 1, c),
-          _buildNavItem(Icons.screen_search_desktop_outlined, "Articles", 2, c),
-          _buildNavItem(Icons.pets, "Profile", 3, c),
+          _buildNavItem(Icons.pets, "Profile", 2, c),
         ],
       ),
     );

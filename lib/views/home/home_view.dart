@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import '../../controllers/data_controller.dart';
 import '../../controllers/home_controller.dart';
 import 'package:camera/camera.dart';
+import '../../controllers/main_controller.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -18,14 +19,20 @@ class HomeView extends StatelessWidget {
           final currentDog = Get.find<DataController>().currentDog.value;
           return Row(
             children: [
-              CircleAvatar(
-                radius: 32.0,
-                backgroundImage: currentDog != null && currentDog.photo.isNotEmpty
-                    ? MemoryImage(base64Decode(currentDog.photo))
-                    : null,
-                child: currentDog == null || currentDog.photo.isEmpty
-                    ? const Icon(Icons.pets, size: 30)
-                    : null,
+              GestureDetector(
+                onTap: () {
+                  // 👇 This switches to the Profile tab in your bottom nav
+                  Get.find<MainController>().changePage(2);
+                },
+                child: CircleAvatar(
+                  radius: 32.0,
+                  backgroundImage: currentDog != null && currentDog.photo.isNotEmpty
+                      ? MemoryImage(base64Decode(currentDog.photo))
+                      : null,
+                  child: currentDog == null || currentDog.photo.isEmpty
+                      ? const Icon(Icons.pets, size: 30)
+                      : null,
+                ),
               ),
               const SizedBox(width: 8),
               Expanded(

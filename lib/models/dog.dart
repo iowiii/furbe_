@@ -4,7 +4,7 @@ class Dog {
   final String gender;
   final String type;
   String info;
-  final String photo;
+  String photo;
 
   Dog({
     required this.id,
