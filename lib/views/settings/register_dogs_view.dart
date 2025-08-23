@@ -25,29 +25,55 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
     }
 
     if (_picking) return;
-    
+
     // Show image source selection dialog
     final imageSource = await Get.dialog<ImageSource>(
       AlertDialog(
-        title: const Text('Select Image Source'),
+        title: const Text(
+          'Select Image Source',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             ListTile(
-              leading: const Icon(Icons.camera_alt),
+              leading: const Icon(Icons.camera_alt, color: Color(0xFFE15C31)),
               title: const Text('Camera'),
               onTap: () => Get.back(result: ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library),
+              leading: const Icon(Icons.photo_library, color: Color(0xFFE15C31)),
               title: const Text('Gallery'),
               onTap: () => Get.back(result: ImageSource.gallery),
             ),
           ],
         ),
+        actions: [
+          Center(
+            child: TextButton(
+              style: TextButton.styleFrom(
+                backgroundColor: const Color(0xFFE15C31),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 12),
+              ),
+              onPressed: () => Get.back(result: null), // return null when cancel
+              child: const Text(
+                'Cancel',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
-    
+
     if (imageSource == null) return;
     
     _picking = true;
@@ -181,6 +207,16 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                   controller: dogNameController,
                   decoration: InputDecoration(
                     labelText: 'Dog Name',
+                    // label when not focused
+                    labelStyle: const TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    // label when focused
+                    floatingLabelStyle: const TextStyle(
+                      color: Color(0xFFE15C31),
+                      fontWeight: FontWeight.bold,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -200,6 +236,16 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                   value: gender,
                   decoration: InputDecoration(
                     labelText: 'Gender',
+                    // label when not focused
+                    labelStyle: const TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    // label when focused
+                    floatingLabelStyle: const TextStyle(
+                      color: Color(0xFFE15C31),
+                      fontWeight: FontWeight.bold,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -225,6 +271,16 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                     value: selectedBreed,
                     decoration: InputDecoration(
                       labelText: 'Breed (AI Detected)',
+                      // label when not focused
+                      labelStyle: const TextStyle(
+                        color: Colors.grey,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      // label when focused
+                      floatingLabelStyle: const TextStyle(
+                        color: Color(0xFFE15C31),
+                        fontWeight: FontWeight.bold,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),

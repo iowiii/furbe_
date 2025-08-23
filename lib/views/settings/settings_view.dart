@@ -46,11 +46,23 @@ class SettingsView extends StatelessWidget {
                     ),
                   ),
                   actions: [
-                    TextButton(
-                      onPressed: () => Get.back(),
-                      child: const Text(
-                        "Close",
-                        style: TextStyle(color: Color(0xFFE15C31)),
+                    Center(
+                      child: TextButton(
+                        style: TextButton.styleFrom(
+                          backgroundColor: const Color(0xFFE15C31), // background color
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12), // rounded corners
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 12),
+                        ),
+                        onPressed: () => Get.back(),
+                        child: const Text(
+                          "Close",
+                          style: TextStyle(
+                            color: Colors.white, // text color
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
                     ),
                   ],
@@ -74,7 +86,10 @@ class SettingsView extends StatelessWidget {
                   ),
                   title: const Text(
                     "Logout",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
                   ),
                   content: const Text(
                     "Are you sure you want to logout?",
@@ -82,12 +97,9 @@ class SettingsView extends StatelessWidget {
                   ),
                   actionsAlignment: MainAxisAlignment.spaceEvenly,
                   actions: [
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        side: const BorderSide(
-                          color: Color(0xFFE15C31),
-                          width: 2,
-                        ),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFE15C31),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -95,7 +107,7 @@ class SettingsView extends StatelessWidget {
                       onPressed: () => Get.back(),
                       child: const Text(
                         "No",
-                        style: TextStyle(color: Color(0xFFE15C31)),
+                        style: TextStyle(color: Colors.white),
                       ),
                     ),
                     ElevatedButton(
@@ -111,7 +123,10 @@ class SettingsView extends StatelessWidget {
                         Get.back();
                         Get.offAllNamed('/login');
                       },
-                      child: const Text("Yes", style: TextStyle(color: Colors.white)),
+                      child: const Text(
+                        "Yes",
+                        style: TextStyle(color: Colors.white),
+                      ),
                     ),
                   ],
                 ),
