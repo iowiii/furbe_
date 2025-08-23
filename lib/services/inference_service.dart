@@ -31,7 +31,29 @@ class InferenceService {
     }
   }
   
-  static Future<Map<String, dynamic>> detectMood(String imagePath) async {
+  static Future<Map<String, dynamic>> detectBreedAndMood(String imagePath) async {
+    try {
+      // First detect breed
+      final breedResult = await detectBreed(imagePath);
+      final breed = breedResult['label'];
+      
+      // Then detect mood using the detected breed
+      final moodResult = await detectMood(imagePath, breed: breed);
+      
+      return {
+        'breed': breedResult,
+        'mood': moodResult,
+      };
+    } catch (e) {
+      print('Error detecting breed and mood: $e');
+      return {
+        'breed': _mockBreedDetection(),
+        'mood': _mockMoodDetection(),
+      };
+    }
+  }
+  
+  static Future<Map<String, dynamic>> detectMood(String imagePath, {String? breed}) async {
     try {
       final file = File(imagePath);
       if (!file.existsSync()) {
@@ -40,6 +62,11 @@ class InferenceService {
 
       final request = http.MultipartRequest('POST', Uri.parse('$_pythonServerUrl/predict_mood'));
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
+      
+      // Add breed parameter if provided
+      if (breed != null) {
+        request.fields['breed'] = breed;
+      }
       
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
@@ -70,7 +97,23 @@ class InferenceService {
     final random = DateTime.now().millisecond % moods.length;
     return {
       'label': moods[random],
-      'confidence': 0.80 + (DateTime.now().millisecond % 20) / 100
+      'confidence': 0.80 + (DateTime.now().millisecond % 20) / 100,
+      'breed': 'Unknown'
     };
+  }
+  
+  static Future<Map<String, dynamic>> checkModelsStatus() async {
+    try {
+      final response = await http.get(Uri.parse('$_pythonServerUrl/models_status'));
+      
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      } else {
+        return {'error': 'Failed to check models status'};
+      }
+    } catch (e) {
+      print('Error checking models status: $e');
+      return {'error': 'Connection failed'};
+    }
   }
 }

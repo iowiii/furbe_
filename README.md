@@ -27,7 +27,11 @@ Dog Registration
 - Users can manually override detected breed
 
 Mood Detection
-- Real-time mood detection using dog_mood_classifier_finetuned.tflite
+- Breed-specific mood detection using dedicated models:
+  - pomeranian_mood.tflite for Pomeranian dogs
+  - pug_mood.tflite for Pug dogs
+  - shih_tzu_mood.tflite for Shih Tzu dogs
+- System automatically routes to appropriate model based on registered dog breed
 - Start Scan button disabled when no dog is registered
 
 ================ SETUP INSTRUCTIONS ================
@@ -40,7 +44,9 @@ Mood Detection
 
 3. Ensure TFLite models are in assets/models/:
    - dog_classification.tflite
-   - dog_mood_classifier_finetuned.tflite
+   - pomeranian_mood.tflite
+   - pug_mood.tflite
+   - shih_tzu_mood.tflite
 
 4. Run the Flutter app:
    flutter run

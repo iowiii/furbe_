@@ -20,23 +20,38 @@ class SettingsView extends StatelessWidget {
             onTap: () => Get.toNamed(AppRoutes.registerDogs),
           ),
           ListTile(
-          leading: const Icon(Icons.storage_outlined),
-            title: const Text('Data Privacy'),
+            leading: const Icon(Icons.privacy_tip_outlined),
+            title: const Text('Data Privacy Protocol'),
             onTap: () {
               Get.dialog(
                 AlertDialog(
-                  title: const Text("Data Privacy"),
+                  title: const Text("Data Privacy Protocol"),
                   content: const SingleChildScrollView(
                     child: Text(
-                      "We respect your privacy. All data collected by this app "
-                      "is stored securely and only used to improve your experience. "
-                      "You can manage, edit, or delete your account data at any time.",
+                      "This study strictly complies with Republic Act No. 10173, "
+                          "otherwise known as the Data Privacy Act of 2012 — "
+                          "“An Act Protecting Individual Personal Information in Information "
+                          "and Communications Systems in the Government and the Private Sector, "
+                          "Creating for this Purpose a National Privacy Commission, and for Other Purposes.”\n\n"
+                          "All personal information, including survey responses and contact details, "
+                          "will be anonymized and securely stored in encrypted databases. Only "
+                          "authorized researchers will have access, and participants may withdraw "
+                          "at any time.\n\n"
+                          "Any collected images that may capture human faces will be anonymized "
+                          "(blurred, cropped, or excluded) before analysis to protect identities.\n\n"
+                          "Regarding animal welfare, the study adheres to Republic Act No. 8485, "
+                          "otherwise known as the Animal Welfare Act of the Philippines. No invasive "
+                          "or harmful procedures will be used. Dogs will only be observed in their "
+                          "natural environment with owner consent and supervision.",
                     ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Get.back(),
-                      child: const Text("Close", style: TextStyle(color: Color(0xFFE15C31))),
+                      child: const Text(
+                        "Close",
+                        style: TextStyle(color: Color(0xFFE15C31)),
+                      ),
                     ),
                   ],
                 ),

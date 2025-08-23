@@ -10,48 +10,48 @@ class TFLiteResult {
 }
 
 class TFLiteService {
-  Interpreter? _interpreter;
-  List<String> _labels = [];
+  Map<String, Interpreter> _interpreters = {};
+  List<String> _labels = ['Happy', 'Sad', 'Angry', 'Scared'];
   int _frameCount = 0;
   static const int _skipFrames = 5; // Process every 5th frame for better FPS
 
   TFLiteService() {
-    _loadModel();
+    _loadModels();
   }
 
-  Future<void> _loadModel() async {
-    try {
-      _interpreter = await Interpreter.fromAsset(
-        'assets/models/dog_mood_classifier_finetuned.tflite',
-      );
+  Future<void> _loadModels() async {
+    final breedModels = {
+      'Pomeranian': 'assets/models/pomeranian_mood.tflite',
+      'Pug': 'assets/models/pug_mood.tflite',
+      'Shih Tzu': 'assets/models/shih_tzu_mood.tflite',
+    };
 
-      _labels = [
-        'shih_tzu_happy', 'shih_tzu_sad', 'shih_tzu_angry', 'shih_tzu_scared',
-        'pug_happy', 'pug_sad', 'pug_angry', 'pug_scared',
-        'pomeranian_happy', 'pomeranian_sad', 'pomeranian_angry', 'pomeranian_scared'
-      ];
+    for (final entry in breedModels.entries) {
+      try {
+        final interpreter = await Interpreter.fromAsset(entry.value);
+        _interpreters[entry.key] = interpreter;
+        print("✅ ${entry.key} model loaded successfully");
 
-      print("✅ Model loaded successfully");
+        // 🔍 Inspect input and output tensor shapes
+        for (var i = 0; i < interpreter.getInputTensors().length; i++) {
+          final tensor = interpreter.getInputTensors()[i];
+          print("🔹 ${entry.key} Input[$i] shape: ${tensor.shape}, type: ${tensor.type}");
+        }
 
-      // 🔎 Print Input Tensor details
-      final inputs = _interpreter!.getInputTensors();
-      for (var i = 0; i < inputs.length; i++) {
-        print("👉 Input[$i] shape: ${inputs[i].shape}, type: ${inputs[i].type}");
+        for (var i = 0; i < interpreter.getOutputTensors().length; i++) {
+          final tensor = interpreter.getOutputTensors()[i];
+          print("🔸 ${entry.key} Output[$i] shape: ${tensor.shape}, type: ${tensor.type}");
+        }
+      } catch (e) {
+        print('❌ Error loading ${entry.key} model: $e');
       }
-
-      // 🔎 Print Output Tensor details
-      final outputs = _interpreter!.getOutputTensors();
-      for (var i = 0; i < outputs.length; i++) {
-        print("👉 Output[$i] shape: ${outputs[i].shape}, type: ${outputs[i].type}");
-      }
-
-    } catch (e) {
-      print('❌ Error loading model: $e');
     }
   }
 
-  Future<List<TFLiteResult>> processCameraImage(CameraImage image) async {
-    if (_interpreter == null) return [];
+  Future<List<TFLiteResult>> processCameraImage(CameraImage image, {String? breed}) async {
+    if (breed == null || !_interpreters.containsKey(breed)) return [];
+
+    final interpreter = _interpreters[breed]!;
 
     // Skip frames for better FPS
     _frameCount++;
@@ -62,26 +62,26 @@ class TFLiteService {
       final img.Image resized = img.copyResize(rgbImage, width: 224, height: 224);
 
       // Create 4D input tensor [1, 224, 224, 3]
-      final input = List.generate(1, (_) => 
-        List.generate(224, (y) => 
-          List.generate(224, (x) => 
-            List.generate(3, (c) {
-              final pixel = resized.getPixel(x, y);
-              switch (c) {
-                case 0: return pixel.r / 255.0;
-                case 1: return pixel.g / 255.0;
-                case 2: return pixel.b / 255.0;
-                default: return 0.0;
-              }
-            })
+      final input = List.generate(1, (_) =>
+          List.generate(224, (y) =>
+              List.generate(224, (x) =>
+                  List.generate(3, (c) {
+                    final pixel = resized.getPixel(x, y);
+                    switch (c) {
+                      case 0: return pixel.r / 255.0;
+                      case 1: return pixel.g / 255.0;
+                      case 2: return pixel.b / 255.0;
+                      default: return 0.0;
+                    }
+                  })
+              )
           )
-        )
       );
 
-      // Create 2D output tensor [1, 12]
-      final output = List.generate(1, (_) => List.filled(12, 0.0));
+      // Create 2D output tensor [1, 4] for mood classes
+      final output = List.generate(1, (_) => List.filled(4, 0.0));
 
-      _interpreter!.run(input, output);
+      interpreter.run(input, output);
 
       final results = <TFLiteResult>[];
       final prediction = output[0];
@@ -132,6 +132,9 @@ class TFLiteService {
   }
 
   void dispose() {
-    _interpreter?.close();
+    for (final interpreter in _interpreters.values) {
+      interpreter.close();
+    }
+    _interpreters.clear();
   }
 }

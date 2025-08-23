@@ -5,6 +5,7 @@ import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../core/app_routes.dart';
 import '../../controllers/data_controller.dart';
+import '../../services/inference_service.dart';
 
 class DogSetupPhotoView extends StatefulWidget {
   final String dogName;
@@ -27,6 +28,8 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
   File? _dogImage;
   final ImagePicker _picker = ImagePicker();
   final auth = Get.find<DataController>();
+  bool _isDetecting = false;
+  String? _detectedBreed;
 
   Future<void> _takePhoto() async {
     final XFile? pickedFile = await _picker.pickImage(source: ImageSource.camera);
@@ -34,6 +37,7 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
       setState(() {
         _dogImage = File(pickedFile.path);
       });
+      await _detectBreed();
     }
   }
 
@@ -43,12 +47,43 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
       setState(() {
         _dogImage = File(pickedFile.path);
       });
+      await _detectBreed();
+    }
+  }
+  
+  Future<void> _detectBreed() async {
+    if (_dogImage == null) return;
+    
+    setState(() {
+      _isDetecting = true;
+    });
+    
+    try {
+      final result = await InferenceService.detectBreed(_dogImage!.path);
+      setState(() {
+        _detectedBreed = result['label'];
+        _isDetecting = false;
+      });
+      
+      if (_detectedBreed != null && _detectedBreed != 'Unknown') {
+        Get.snackbar(
+          'Breed Detected', 
+          'Detected: $_detectedBreed\nYou can override this if incorrect.',
+          duration: const Duration(seconds: 3),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isDetecting = false;
+      });
+      Get.snackbar('Error', 'Failed to detect breed: $e');
     }
   }
 
   void _removePhoto() {
     setState(() {
       _dogImage = null;
+      _detectedBreed = null;
     });
   }
 
@@ -59,10 +94,13 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
     }
 
     try {
+      // Use detected breed if available, otherwise use manually selected breed
+      final finalBreed = _detectedBreed ?? widget.dogBreed;
+      
       await auth.addDog(
         name: widget.dogName,
         gender: widget.dogGender,
-        type: widget.dogBreed,
+        type: finalBreed,
         info: '',
         photoPath: _dogImage?.path ?? '',
       );
@@ -111,6 +149,13 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
                       fit: BoxFit.cover,
                     ),
                   ),
+                  if (_isDetecting)
+                    const Positioned(
+                      bottom: 8,
+                      left: 8,
+                      right: 8,
+                      child: LinearProgressIndicator(),
+                    ),
                   IconButton(
                     icon: const Icon(Icons.close, color: Colors.red),
                     onPressed: _removePhoto,
@@ -127,6 +172,31 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
                 ],
               ),
 
+            if (_detectedBreed != null && _detectedBreed != 'Unknown')
+              Container(
+                margin: const EdgeInsets.symmetric(vertical: 16),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade50,
+                  border: Border.all(color: Colors.green),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      'Detected Breed: $_detectedBreed',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const Text(
+                      'This will override your manual selection',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
             const SizedBox(height: 40),
             SizedBox(
               width: double.infinity,

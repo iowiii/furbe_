@@ -43,8 +43,11 @@ flutter:
   uses-material-design: true
   assets:
     - assets/models/
-    - assets/models/dog_mood_classifier_finetuned.tflite
     - assets/images/logo_bare.png
     - assets/images/logo_main.png
     - assets/images/logo_main_zoomed.png
     - assets/images/paw.png
+    - assets/models/dog_classification.tflite
+    - assets/models/pomeranian_mood.tflite
+    - assets/models/pug_mood.tflite
+    - assets/models/shih_tzu_mood.tflite

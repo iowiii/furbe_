@@ -64,7 +64,13 @@ class HomeController extends GetxController {
     _updateFPS();
 
     try {
-      final results = await tfliteService.processCameraImage(cameraImage);
+      final dog = dataController.currentDog.value;
+      if (dog == null) {
+        resultText.value = "No dog registered";
+        return;
+      }
+
+      final results = await tfliteService.processCameraImage(cameraImage, breed: dog.type);
 
       if (results.isNotEmpty) {
         results.sort((a, b) => b.confidence.compareTo(a.confidence));
@@ -72,10 +78,9 @@ class HomeController extends GetxController {
         
         // Only show results with 70% or higher confidence
         if (topResult.confidence >= 0.7) {
-          final dog = dataController.currentDog.value;
           final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
           
-          if (_saveToDatabase && dog != null) {
+          if (_saveToDatabase) {
             resultText.value = "$modeText ${topResult.label} - ${dog.type}";
           } else {
             resultText.value = "$modeText ${topResult.label}";
@@ -90,10 +95,10 @@ class HomeController extends GetxController {
             });
           }
         } else {
-          resultText.value = "Detecting dog mood (${(topResult.confidence * 100).toInt()}%)";
+          resultText.value = "Detecting ${dog.type} mood (${(topResult.confidence * 100).toInt()}%)";
         }
       } else {
-        resultText.value = "Position your dog";
+        resultText.value = "Position your ${dog.type}";
       }
     } catch (e) {
       debugPrint("Error in processFrame: $e");
@@ -107,52 +112,109 @@ class HomeController extends GetxController {
     if (dog == null) return;
 
     final dateNow = DateTime.now();
-    final infoController = TextEditingController(text: dog.info);
+    final infoController = TextEditingController(text: ""); // reset on scan
 
     Get.dialog(
-      AlertDialog(
-        title: const Text("Dog Detected"),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Name: ${dog.name}", overflow: TextOverflow.ellipsis),
-              Text("Breed: ${dog.type}", overflow: TextOverflow.ellipsis),
-              Text("Mood: $mood", overflow: TextOverflow.ellipsis),
-              Text(
-                "Date: ${DateFormat('MMM dd, yyyy HH:mm').format(dateNow)}",
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: infoController,
-                decoration: const InputDecoration(
-                  labelText: 'Additional Info',
-                  border: OutlineInputBorder(),
+      Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        insetPadding: const EdgeInsets.all(20),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Title row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Dog Detected",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => Get.back(),
+                      child: const Icon(Icons.close, color: Colors.black54),
+                    ),
+                  ],
                 ),
-                maxLines: 2,
-                onChanged: (val) => dog.info = val,
-              ),
-            ],
+                const SizedBox(height: 16),
+
+                // Dog info boxes
+                _infoBox("Name: ${dog.name}"),
+                const SizedBox(height: 8),
+                _infoBox("Breed: ${dog.type}"),
+                const SizedBox(height: 8),
+                _infoBox("Mood: $mood"),
+                const SizedBox(height: 8),
+                _infoBox("Date: ${DateFormat('MMM dd, yyyy HH:mm').format(dateNow)}"),
+                const SizedBox(height: 12),
+
+                // Additional info input
+                TextField(
+                  controller: infoController,
+                  decoration: const InputDecoration(
+                    labelText: 'Additional Info',
+                    border: OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+                const SizedBox(height: 20),
+
+                // Save button full width
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: () async {
+                      dog.info = infoController.text; // save additional info
+                      await _saveResult(mood);
+                      Get.back();
+                    },
+                    child: const Text(
+                      "Save",
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text("Cancel"),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              await _saveResult(mood);
-              Get.back();
-            },
-            child: const Text("Save"),
-          ),
-        ],
       ),
     );
   }
+
+  Widget _infoBox(String text) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade400),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
 
   Future<void> _saveResult(String mood) async {
     final dog = dataController.currentDog.value;
