@@ -29,18 +29,34 @@ class _DogSetupNameViewState extends State<DogSetupNameView> {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 32),
+
               TextField(
                 controller: nameController,
+                cursorColor: Colors.grey.shade600, // cursor color
                 decoration: InputDecoration(
                   hintText: 'Enter dog name',
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(
+                      color: Colors.grey.shade600, // normal border color
+                      width: 1,
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(
+                      color: Color(0xFFE15C31), // focused border color
+                      width: 2,
+                    ),
                   ),
                 ),
               ),
               const SizedBox(height: 40),
+
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -53,7 +69,10 @@ class _DogSetupNameViewState extends State<DogSetupNameView> {
                     if (nameController.text.trim().isEmpty) return;
                     Get.to(() => DogSetupGenderView(dogName: nameController.text.trim()));
                   },
-                  child: const Text('Continue', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  child: const Text(
+                    'Continue',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ),
             ],

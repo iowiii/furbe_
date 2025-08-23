@@ -19,10 +19,14 @@ class _RegisterViewState extends State<RegisterView> {
 
   bool isLoading = false;
 
+  // Password visibility toggles
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // Important to avoid overflow
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -65,10 +69,11 @@ class _RegisterViewState extends State<RegisterView> {
                           'Phone Number (+63xxxxxxxxxx)',
                           keyboardType: TextInputType.phone),
                       const SizedBox(height: 16),
-                      _buildTextField(passController, 'Password', obscure: true),
+                      _buildTextField(passController, 'Password',
+                          obscure: true, isPasswordField: true),
                       const SizedBox(height: 16),
                       _buildTextField(confirmPassController, 'Confirm Password',
-                          obscure: true),
+                          obscure: true, isConfirm: true),
                       const SizedBox(height: 28),
 
                       SizedBox(
@@ -134,10 +139,13 @@ class _RegisterViewState extends State<RegisterView> {
       String hintText, {
         bool obscure = false,
         TextInputType keyboardType = TextInputType.text,
+        bool isPasswordField = false,
+        bool isConfirm = false,
       }) {
     return TextField(
       controller: controller,
-      obscureText: obscure,
+      obscureText: obscure &&
+          (isPasswordField ? _obscurePassword : isConfirm ? _obscureConfirmPassword : false),
       keyboardType: keyboardType,
       decoration: InputDecoration(
         hintText: hintText,
@@ -149,6 +157,27 @@ class _RegisterViewState extends State<RegisterView> {
         ),
         contentPadding:
         const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+        suffixIcon: isPasswordField
+            ? IconButton(
+          icon: Icon(
+            (isPasswordField ? _obscurePassword : _obscureConfirmPassword)
+                ? Icons.visibility_off
+                : Icons.visibility,
+            color: (isPasswordField ? _obscurePassword : _obscureConfirmPassword)
+                ? Colors.grey[600]
+                : const Color(0xFFE15C31),
+          ),
+          onPressed: () {
+            setState(() {
+              if (isPasswordField) {
+                _obscurePassword = !_obscurePassword;
+              } else {
+                _obscureConfirmPassword = !_obscureConfirmPassword;
+              }
+            });
+          },
+        )
+            : null,
       ),
     );
   }
@@ -176,7 +205,16 @@ class _RegisterViewState extends State<RegisterView> {
       formattedPhone = '63$formattedPhone';
     }
 
-    setState(() => isLoading = true);
+    // Show full-screen loading
+    Get.dialog(
+      Center(
+        child: CircularProgressIndicator(
+          color: Colors.grey.shade100, // match your theme
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
     try {
       await authController.registerUser(
         name,
@@ -184,6 +222,7 @@ class _RegisterViewState extends State<RegisterView> {
         password,
         onCodeSent: (verificationId, resendToken) {
           if (!mounted) return;
+          Get.back(); // close loading
           Get.toNamed(
             AppRoutes.otp,
             arguments: {
@@ -195,14 +234,15 @@ class _RegisterViewState extends State<RegisterView> {
         },
         onError: (errorMessage) {
           if (!mounted) return;
+          Get.back(); // close loading
           Get.snackbar('Error', errorMessage);
         },
       );
     } catch (e) {
       if (!mounted) return;
+      Get.back(); // close loading
       Get.snackbar('Error', 'Registration failed: $e');
-    } finally {
-      setState(() => isLoading = false);
     }
   }
 }
+

@@ -93,10 +93,20 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
       return;
     }
 
+    // Show loading dialog
+    Get.dialog(
+      Center(
+        child: CircularProgressIndicator(
+          color: Colors.grey.shade100, // spinner color matches your theme
+        ),
+      ),
+      barrierDismissible: false,
+    );
+
     try {
       // Use detected breed if available, otherwise use manually selected breed
       final finalBreed = _detectedBreed ?? widget.dogBreed;
-      
+
       await auth.addDog(
         name: widget.dogName,
         gender: widget.dogGender,
@@ -109,11 +119,14 @@ class _DogSetupPhotoViewState extends State<DogSetupPhotoView> {
         await auth.loadAppUser(auth.currentPhone!);
       }
 
+      Get.back(); // close loading dialog
       Get.offAllNamed(AppRoutes.main);
     } catch (e) {
+      Get.back(); // close loading dialog
       Get.snackbar('Error', 'Failed to add dog: $e');
     }
   }
+
 
   @override
   Widget build(BuildContext context) {

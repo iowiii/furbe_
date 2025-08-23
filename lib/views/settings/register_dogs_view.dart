@@ -44,7 +44,8 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
               onTap: () => Get.back(result: ImageSource.camera),
             ),
             ListTile(
-              leading: const Icon(Icons.photo_library, color: Color(0xFFE15C31)),
+              leading:
+                  const Icon(Icons.photo_library, color: Color(0xFFE15C31)),
               title: const Text('Gallery'),
               onTap: () => Get.back(result: ImageSource.gallery),
             ),
@@ -58,9 +59,11 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 80, vertical: 12),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 80, vertical: 12),
               ),
-              onPressed: () => Get.back(result: null), // return null when cancel
+              onPressed: () =>
+                  Get.back(result: null), // return null when cancel
               child: const Text(
                 'Cancel',
                 style: TextStyle(
@@ -75,7 +78,7 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
     );
 
     if (imageSource == null) return;
-    
+
     _picking = true;
     var pickedFile = await _picker.pickImage(source: imageSource);
     _picking = false;
@@ -92,11 +95,12 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
     String detectedBreed = "Detecting...";
 
     final breeds = ["Shih Tzu", "Pug", "Pomeranian"];
-    
+
     // Detect breed using AI
     try {
       final result = await InferenceService.detectBreed(pickedFile.path);
-      detectedBreed = '${result['label']} (${(result['confidence'] * 100).toStringAsFixed(1)}%)';
+      detectedBreed =
+          '${result['label']} (${(result['confidence'] * 100).toStringAsFixed(1)}%)';
       selectedBreed = result['label'];
     } catch (e) {
       detectedBreed = "Detection failed";
@@ -134,24 +138,29 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                               ListTile(
                                 leading: const Icon(Icons.camera_alt),
                                 title: const Text('Camera'),
-                                onTap: () => Get.back(result: ImageSource.camera),
+                                onTap: () =>
+                                    Get.back(result: ImageSource.camera),
                               ),
                               ListTile(
                                 leading: const Icon(Icons.photo_library),
                                 title: const Text('Gallery'),
-                                onTap: () => Get.back(result: ImageSource.gallery),
+                                onTap: () =>
+                                    Get.back(result: ImageSource.gallery),
                               ),
                             ],
                           ),
                         ),
                       );
                       if (newSource != null) {
-                        final newFile = await _picker.pickImage(source: newSource);
+                        final newFile =
+                            await _picker.pickImage(source: newSource);
                         if (newFile != null) {
                           pickedFile = newFile;
                           try {
-                            final result = await InferenceService.detectBreed(pickedFile.path);
-                            detectedBreed = '${result['label']} (${(result['confidence'] * 100).toStringAsFixed(1)}%)';
+                            final result = await InferenceService.detectBreed(
+                                pickedFile.path);
+                            detectedBreed =
+                                '${result['label']} (${(result['confidence'] * 100).toStringAsFixed(1)}%)';
                             selectedBreed = result['label'];
                           } catch (e) {
                             detectedBreed = "Detection failed";
@@ -267,7 +276,8 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                 ),
                 const SizedBox(height: 16),
                 StatefulBuilder(
-                  builder: (context, setState) => DropdownButtonFormField<String>(
+                  builder: (context, setState) =>
+                      DropdownButtonFormField<String>(
                     value: selectedBreed,
                     decoration: InputDecoration(
                       labelText: 'Breed (AI Detected)',
@@ -325,9 +335,11 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                       ),
-                      child: const Text('Add', style: TextStyle(color: Colors.white)),
+                      child: const Text('Add',
+                          style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -385,7 +397,11 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                   children: const [
                     CircleAvatar(
                       radius: 50,
-                      child: Icon(Icons.add, size: 40,color: Colors.white,),
+                      child: Icon(
+                        Icons.add,
+                        size: 40,
+                        color: Colors.white,
+                      ),
                       backgroundColor: Color(0xFFE15C31),
                     ),
                     SizedBox(height: 8),
@@ -416,11 +432,56 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                       onPressed: () async {
                         final confirmed = await Get.dialog<bool>(
                           AlertDialog(
-                            title: const Text('Delete Dog', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                            content: Text('Are you sure you want to delete ${dog.name}?'),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            title: const Text(
+                              'Delete Dog',
+                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                            ),
+                            content: Text(
+                              'Are you sure you want to delete ${dog.name}?',
+                              style: const TextStyle(fontSize: 16),
+                            ),
                             actions: [
-                              TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel', style: TextStyle(color: Color(0xFFE15C31)))),
-                              TextButton(onPressed: () => Get.back(result: true), child: const Text('Delete', style: TextStyle(color: Color(0xFFE15C31)))),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  // Cancel Button
+                                  TextButton(
+                                    onPressed: () => Get.back(result: false),
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: const Color(0xFFE15C31),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                    ),
+                                    child: const Text(
+                                      'Cancel',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12), // spacing between buttons
+                                  // Delete Button
+                                  TextButton(
+                                    onPressed: () => Get.back(result: true),
+                                    style: TextButton.styleFrom(
+                                      backgroundColor: const Color(0xFFE15C31),
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                    ),
+                                    child: const Text(
+                                      'Delete',
+                                      style: TextStyle(fontSize: 16),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ],
                           ),
                         );
@@ -428,7 +489,8 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                         if (confirmed == true) {
                           try {
                             await auth.deleteDog(dog.id);
-                            Get.snackbar('Deleted', '${dog.name} removed successfully');
+                            Get.snackbar(
+                                'Deleted', '${dog.name} removed successfully');
                           } catch (e) {
                             Get.snackbar('Error', 'Failed to delete: $e');
                           }

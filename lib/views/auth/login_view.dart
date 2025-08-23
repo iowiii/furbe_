@@ -15,10 +15,12 @@ class _LoginViewState extends State<LoginView> {
   final passCtrl = TextEditingController();
   final auth = Get.find<DataController>();
 
+  bool _obscurePassword = true; // 👈 control for password visibility
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // ensures UI shifts when keyboard appears
+      resizeToAvoidBottomInset: true,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -26,7 +28,6 @@ class _LoginViewState extends State<LoginView> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 80),
-              // Logo
               Center(
                 child: Image.asset(
                   'assets/images/logo_main_zoomed.png',
@@ -34,8 +35,6 @@ class _LoginViewState extends State<LoginView> {
                 ),
               ),
               const SizedBox(height: 90),
-
-              // Title
               const Align(
                 alignment: Alignment.centerLeft,
                 child: Text(
@@ -60,16 +59,17 @@ class _LoginViewState extends State<LoginView> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      vertical: 16, horizontal: 12),
+                  contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                 ),
               ),
               const SizedBox(height: 16),
 
-              // Password Field
+              // Password Field with Eye Icon
+              // Password Field with Eye Icon
               TextField(
                 controller: passCtrl,
-                obscureText: true,
+                obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   hintText: 'Password',
                   filled: true,
@@ -78,8 +78,21 @@ class _LoginViewState extends State<LoginView> {
                     borderRadius: BorderRadius.circular(8),
                     borderSide: BorderSide.none,
                   ),
-                  contentPadding: const EdgeInsets.symmetric(
-                      vertical: 16, horizontal: 12),
+                  contentPadding:
+                  const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                      color: _obscurePassword
+                          ? Colors.grey[600] // hidden → gray
+                          : const Color(0xFFE15C31), // 0visible → orange
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
               ),
               const SizedBox(height: 28),
@@ -102,28 +115,42 @@ class _LoginViewState extends State<LoginView> {
                     final password = passCtrl.text.trim();
 
                     if (rawPhone.isEmpty || password.isEmpty) {
-                      Get.snackbar(
-                          'Error', 'Phone number and password required');
+                      Get.snackbar('Error', 'Phone number and password required');
                       return;
                     }
 
-                    // Check DB
-                    final snapshot = await auth.firebaseService.db
-                        .child('accounts/$rawPhone')
-                        .get();
-                    if (!snapshot.exists || snapshot.value == null) {
-                      Get.snackbar('Error', 'Phone number not registered');
-                      return;
-                    }
+                    // Show loading dialog
+                    Get.dialog(
+                      Center(child: CircularProgressIndicator(color: Colors.grey.shade100,)),
+                      barrierDismissible: false,
+                    );
 
-                    final userMap = snapshot.value as Map;
-                    if (userMap['password'] != password) {
-                      Get.snackbar('Error', 'Incorrect password');
-                      return;
-                    }
+                    try {
+                      // Check DB
+                      final snapshot = await auth.firebaseService.db
+                          .child('accounts/$rawPhone')
+                          .get();
 
-                    await auth.login(rawPhone, password);
-                    Get.offAllNamed(AppRoutes.main);
+                      if (!snapshot.exists || snapshot.value == null) {
+                        Get.back(); // close loading
+                        Get.snackbar('Error', 'Phone number not registered');
+                        return;
+                      }
+
+                      final userMap = snapshot.value as Map;
+                      if (userMap['password'] != password) {
+                        Get.back(); // close loading
+                        Get.snackbar('Error', 'Incorrect password');
+                        return;
+                      }
+
+                      await auth.login(rawPhone, password);
+                      Get.back(); // close loading
+                      Get.offAllNamed(AppRoutes.main);
+                    } catch (e) {
+                      Get.back(); // close loading
+                      Get.snackbar('Error', 'Something went wrong');
+                    }
                   },
                   child: const Text(
                     'Login',
