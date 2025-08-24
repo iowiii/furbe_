@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'package:path/path.dart' as path;
 
 class InferenceService {
   static const String _pythonServerUrl = 'http://localhost:8000';
@@ -35,10 +34,9 @@ class InferenceService {
     try {
       // First detect breed
       final breedResult = await detectBreed(imagePath);
-      final breed = breedResult['label'];
       
-      // Then detect mood using the detected breed
-      final moodResult = await detectMood(imagePath, breed: breed);
+      // Then detect mood using general model (no breed-specific detection)
+      final moodResult = await detectMood(imagePath);
       
       return {
         'breed': breedResult,
@@ -53,7 +51,7 @@ class InferenceService {
     }
   }
   
-  static Future<Map<String, dynamic>> detectMood(String imagePath, {String? breed}) async {
+  static Future<Map<String, dynamic>> detectMood(String imagePath) async {
     try {
       final file = File(imagePath);
       if (!file.existsSync()) {
@@ -62,11 +60,6 @@ class InferenceService {
 
       final request = http.MultipartRequest('POST', Uri.parse('$_pythonServerUrl/predict_mood'));
       request.files.add(await http.MultipartFile.fromPath('image', imagePath));
-      
-      // Add breed parameter if provided
-      if (breed != null) {
-        request.fields['breed'] = breed;
-      }
       
       final response = await request.send();
       final responseBody = await response.stream.bytesToString();
@@ -97,8 +90,7 @@ class InferenceService {
     final random = DateTime.now().millisecond % moods.length;
     return {
       'label': moods[random],
-      'confidence': 0.80 + (DateTime.now().millisecond % 20) / 100,
-      'breed': 'Unknown'
+      'confidence': 0.80 + (DateTime.now().millisecond % 20) / 100
     };
   }
   

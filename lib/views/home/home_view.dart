@@ -66,7 +66,7 @@ class HomeView extends StatelessWidget {
                   padding: const EdgeInsets.all(40),
                 ),
                 onPressed: hasRegisteredDog ? () async {
-                  await Get.to(() => const StartScanPage(), arguments: {'autoSave': true});
+                  await Get.to(() => const StartScanPage(), arguments: {'autoSave': true, 'quickScan': false});
                 } : null,
                 child: Icon(
                   Icons.videocam_outlined,
@@ -95,7 +95,7 @@ class HomeView extends StatelessWidget {
                 padding: const EdgeInsets.all(40),
               ),
               onPressed: () async {
-                await Get.to(() => const StartScanPage(), arguments: {'autoSave': false});
+                await Get.to(() => const StartScanPage(), arguments: {'autoSave': false, 'quickScan': true});
               },
               child: const Icon(
                 Icons.flash_on,
@@ -138,7 +138,8 @@ class _StartScanPageState extends State<StartScanPage> {
 
     final args = Get.arguments as Map<String, dynamic>?;
     final saveMode = args?['autoSave'] ?? false;
-    c.initCamera(saveMode: saveMode);
+    final quickScan = args?['quickScan'] ?? false;
+    c.initCamera(saveMode: saveMode, quickScan: quickScan);
   }
 
   @override

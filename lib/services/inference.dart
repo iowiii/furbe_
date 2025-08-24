@@ -6,11 +6,7 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 
 /// Model paths
 const String _breedModelPath = 'assets/models/dog_classification.tflite';
-const Map<String, String> _moodModelPaths = {
-    'Pomeranian': 'assets/models/pomeranian_mood.tflite',
-    'Pug': 'assets/models/pug_mood.tflite',
-    'Shih Tzu': 'assets/models/shih_tzu_mood.tflite',
-};
+const String _moodModelPath = 'assets/models/dog_mood_efficientnetb0_float32.tflite';
 
 /// Class names
 const List<String> breedClasses = ['Pomeranian', 'Pug', 'Shih Tzu'];
@@ -18,7 +14,7 @@ const List<String> moodClasses = ['Happy', 'Sad', 'Angry', 'Scared'];
 
 class DogInference {
 Interpreter? _breedInterpreter;
-final Map<String, Interpreter> _moodInterpreters = {};
+Interpreter? _moodInterpreter;
 bool _initialized = false;
 
 Future<void> _ensureInitialized() async {
@@ -28,14 +24,9 @@ final options = InterpreterOptions(); // e.g., options.threads = 2;
 _breedInterpreter =
 await Interpreter.fromAsset(_breedModelPath, options: options);
 
-for (final e in _moodModelPaths.entries) {
-    try {
-    _moodInterpreters[e.key] =
-    await Interpreter.fromAsset(e.value, options: options);
-} catch (err) {
-    debugPrint('Failed loading mood model for ${e.key}: $err');
-}
-}
+_moodInterpreter =
+await Interpreter.fromAsset(_moodModelPath, options: options);
+
 _initialized = true;
 } catch (e) {
     debugPrint('Error loading models: $e');
@@ -113,17 +104,13 @@ return {"label": "Unknown", "confidence": 0.0};
 }
 }
 
-/// Returns {"label": String, "confidence": double, "breed": String}
-Future<Map<String, dynamic>> predictMood(Uint8List imageBytes,
-{String? breed}) async {
+/// Returns {"label": String, "confidence": double}
+Future<Map<String, dynamic>> predictMood(Uint8List imageBytes) async {
     await _ensureInitialized();
 
-final detectedBreed =
-breed ?? (await predictBreed(imageBytes))['label'] as String;
-
-final it = _moodInterpreters[detectedBreed];
+final it = _moodInterpreter;
 if (it == null) {
-return {"label": "Unknown", "confidence": 0.0, "breed": detectedBreed};
+return {"label": "Unknown", "confidence": 0.0};
 }
 
 try {
@@ -139,22 +126,18 @@ final idx = _argMax(scores);
 
 return {
     "label": moodClasses[idx],
-    "confidence": scores[idx].toDouble(),
-    "breed": detectedBreed
+    "confidence": scores[idx].toDouble()
 };
 } catch (e) {
-debugPrint('Error predicting mood for $detectedBreed: $e');
-return {"label": "Unknown", "confidence": 0.0, "breed": detectedBreed};
+debugPrint('Error predicting mood: $e');
+return {"label": "Unknown", "confidence": 0.0};
 }
 }
 
 Future<void> close() async {
 try {
 _breedInterpreter?.close();
-for (final it in _moodInterpreters.values) {
-it.close();
-}
-_moodInterpreters.clear();
+_moodInterpreter?.close();
 _initialized = false;
 } catch (_) {}
 }
@@ -166,6 +149,5 @@ final inference = DogInference();
 Future<Map<String, dynamic>> predictBreed(Uint8List imageBytes) =>
 inference.predictBreed(imageBytes);
 
-Future<Map<String, dynamic>> predictMood(Uint8List imageBytes,
-{String? breed}) =>
-inference.predictMood(imageBytes, breed: breed);
+Future<Map<String, dynamic>> predictMood(Uint8List imageBytes) =>
+inference.predictMood(imageBytes);

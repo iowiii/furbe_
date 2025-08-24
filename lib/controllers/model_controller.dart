@@ -5,17 +5,13 @@ import 'package:image/image.dart' as img;
 class ModelController {
   late Interpreter _interpreter;
   final int inputSize = 224;
-  final List<String> labels = [
-    'shih_tzu_happy', 'shih_tzu_sad', 'shih_tzu_angry', 'shih_tzu_scared',
-    'pug_happy', 'pug_sad', 'pug_angry', 'pug_scared',
-    'pomeranian_happy', 'pomeranian_sad', 'pomeranian_angry', 'pomeranian_scared'
-  ];
+  final List<String> labels = ['Happy', 'Sad', 'Angry', 'Scared'];
 
   bool _isModelLoaded = false;
 
   Future<void> loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('assets/models/dog_mood_classifier_finetuned.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/models/dog_mood_efficientnetb0_float32_v4.tflite');
       _isModelLoaded = true;
     } catch (e) {
       print('Error loading model: $e');
@@ -52,8 +48,8 @@ class ModelController {
     }
     try {
       final input = preprocess(imageBytes);
-      // Create 2D output tensor [1, 12]
-      final output = List.generate(1, (_) => List.filled(12, 0.0));
+      // Create 2D output tensor [1, 4] for general mood classes
+      final output = List.generate(1, (_) => List.filled(4, 0.0));
       
       _interpreter.run(input, output);
 
@@ -62,7 +58,10 @@ class ModelController {
             (e) => e == prediction.reduce((a, b) => a > b ? a : b),
       );
 
-      return labels[maxIndex];
+      if (maxIndex >= 0 && maxIndex < labels.length) {
+        return labels[maxIndex];
+      }
+      return 'no_dog';
     } catch (e) {
       print('Classification error: $e');
       return 'no_dog';

@@ -1,14 +1,19 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../services/breed_mood_detector.dart';
+import '../services/tf_service.dart';
+import '../services/inference_service.dart';
 import 'model_controller.dart';
 import 'data_controller.dart';
 import 'package:intl/intl.dart';
+import 'dart:io';
+import 'dart:typed_data';
+import 'package:path_provider/path_provider.dart';
+import 'package:image/image.dart' as img;
 
 
 class HomeController extends GetxController {
-  final BreedMoodDetector breedMoodDetector = BreedMoodDetector();
+  final TFLiteService tfliteService = TFLiteService();
   final DataController dataController = Get.find<DataController>();
   final modelController = ModelController();
 
@@ -21,37 +26,62 @@ class HomeController extends GetxController {
   bool _isProcessing = false;
   bool _hasSaved = false;
   bool _saveToDatabase = false;
+  String? _detectedBreed;
+  bool _breedDetected = false;
+  bool _isQuickScan = false;
   
   // FPS tracking
   DateTime? _lastFrameTime;
   int _frameCount = 0;
   double _currentFps = 0.0;
+  
+  // Memory protection
+  int _skipFrameCount = 0;
+  static const int _maxSkipFrames = 2;
+  bool get mounted => Get.isRegistered<HomeController>();
 
-  Future<void> initCamera({bool saveMode = false}) async {
+  Future<void> initCamera({bool saveMode = false, bool quickScan = false}) async {
     _saveToDatabase = saveMode;
     _hasSaved = false;
-
-    // Initialize breed-mood detector
-    await breedMoodDetector.initialize();
+    _detectedBreed = null;
+    _breedDetected = false;
+    _isQuickScan = quickScan;
     
+    // For Start Scan, use registered dog's breed
+    if (!_isQuickScan) {
+      final dog = dataController.currentDog.value;
+      if (dog != null) {
+        _detectedBreed = dog.type;
+        _breedDetected = true;
+      }
+    }
+
     cameras = await availableCameras();
 
     if (cameras != null && cameras!.isNotEmpty) {
       cameraController = CameraController(
         cameras!.first,
-        ResolutionPreset.medium, // Reduced from high to medium for better FPS
+        ResolutionPreset.low, // Further reduced to prevent memory issues
         enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420,
       );
 
       await cameraController!.initialize();
       isCameraInitialized.value = true;
 
       cameraController!.startImageStream((CameraImage image) {
-        if (!_isProcessing) {
+        // Skip frames to reduce processing load
+        _skipFrameCount++;
+        if (_skipFrameCount < _maxSkipFrames) return;
+        _skipFrameCount = 0;
+        
+        if (!_isProcessing && mounted) {
           _isProcessing = true;
-          processFrame(image).then((_) {
-            // Add delay to prevent buffer overflow and reduce GC pressure
-            Future.delayed(const Duration(milliseconds: 300), () {
+          processFrame(image).catchError((e) {
+            debugPrint('Frame processing error: $e');
+          }).whenComplete(() {
+            // Increased delay to prevent memory overflow
+            Future.delayed(const Duration(milliseconds: 800), () {
               _isProcessing = false;
             });
           });
@@ -67,23 +97,41 @@ class HomeController extends GetxController {
     _updateFPS();
 
     try {
-      // Use unified breed-mood detector
-      final result = await breedMoodDetector.detectBreedAndMood(cameraImage);
-      
-      if (result == null) {
-        resultText.value = "Position dog in frame";
+      // For Quick Scan: detect breed first, then mood
+      // For Start Scan: use registered dog breed, detect mood only
+      if (_isQuickScan && !_breedDetected) {
+        await _detectBreedFromFrame(cameraImage);
         return;
       }
 
-      final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
-      resultText.value = "$modeText ${result.mood} - ${result.breed}";
-      fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
-      
-      if (_saveToDatabase && !_hasSaved) {
-        _hasSaved = true;
-        Future.delayed(const Duration(seconds: 3), () {
-          showCapturePopup(result.mood, result.breed);
-        });
+      // Detect mood using general model
+      final results = await tfliteService.processCameraImageForMood(cameraImage);
+
+      if (results.isNotEmpty) {
+        results.sort((a, b) => b.confidence.compareTo(a.confidence));
+        final topResult = results.first;
+        
+        // Only show results with 70% or higher confidence
+        if (topResult.confidence >= 0.65) {
+          final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
+          final breedText = _detectedBreed != null ? " - $_detectedBreed" : "";
+          
+          resultText.value = "$modeText ${topResult.label}$breedText";
+          fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
+          
+          if (_saveToDatabase && !_hasSaved) {
+            _hasSaved = true;
+            Future.delayed(const Duration(seconds: 2), () {
+              showCapturePopup(topResult.label);
+            });
+          }
+        } else {
+          final breedText = _detectedBreed ?? "dog";
+          resultText.value = "Detecting $breedText mood (${(topResult.confidence * 100).toInt()}%)";
+        }
+      } else {
+        final breedText = _detectedBreed ?? "dog";
+        resultText.value = "Position your $breedText";
       }
     } catch (e) {
       debugPrint("Error in processFrame: $e");
@@ -91,8 +139,102 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<void> _detectBreedFromFrame(CameraImage cameraImage) async {
+    try {
+      // Convert camera image to bytes for breed detection
+      final imageBytes = await _cameraImageToBytes(cameraImage);
+      if (imageBytes == null) return;
 
-  void showCapturePopup(String mood, String detectedBreed) {
+      // Save temporary file for breed detection
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/temp_breed_detection.jpg');
+      await tempFile.writeAsBytes(imageBytes);
+
+      // Detect breed using inference service
+      final breedResult = await InferenceService.detectBreed(tempFile.path);
+      
+      if (breedResult['label'] != 'Unknown' && breedResult['confidence'] > 0.6) {
+        _detectedBreed = breedResult['label'];
+        _breedDetected = true;
+        resultText.value = "Breed detected: $_detectedBreed. Now detecting mood...";
+      } else {
+        resultText.value = "Detecting breed... (${(breedResult['confidence'] * 100).toInt()}%)";
+      }
+
+      // Clean up temp file
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+    } catch (e) {
+      debugPrint("Error detecting breed: $e");
+      // Fallback: proceed with mood detection without breed
+      _breedDetected = true;
+      resultText.value = "Proceeding with mood detection...";
+    }
+  }
+
+  Future<Uint8List?> _cameraImageToBytes(CameraImage cameraImage) async {
+    try {
+      final img.Image rgbImage = _yuv420ToImage(cameraImage);
+      return Uint8List.fromList(img.encodeJpg(rgbImage));
+    } catch (e) {
+      debugPrint("Error converting camera image: $e");
+      return null;
+    }
+  }
+
+  img.Image _yuv420ToImage(CameraImage image) {
+    // Limit image size to prevent memory overflow
+    final maxDimension = 320;
+    final width = image.width > maxDimension ? maxDimension : image.width;
+    final height = image.height > maxDimension ? maxDimension : image.height;
+    
+    final imgImage = img.Image(width: width, height: height);
+
+    try {
+      final yPlane = image.planes[0].bytes;
+      final uPlane = image.planes[1].bytes;
+      final vPlane = image.planes[2].bytes;
+
+      final uvRowStride = image.planes[1].bytesPerRow;
+      final uvPixelStride = image.planes[1].bytesPerPixel ?? 1;
+
+      final scaleX = image.width / width;
+      final scaleY = image.height / height;
+
+      for (int y = 0; y < height; y++) {
+        for (int x = 0; x < width; x++) {
+          final srcX = (x * scaleX).toInt();
+          final srcY = (y * scaleY).toInt();
+          
+          final uvIndex = uvPixelStride * (srcX ~/ 2) + uvRowStride * (srcY ~/ 2);
+          final yIndex = srcY * image.planes[0].bytesPerRow + srcX;
+          
+          if (yIndex < yPlane.length && uvIndex < uPlane.length && uvIndex < vPlane.length) {
+            final yp = yPlane[yIndex];
+            final up = uPlane[uvIndex];
+            final vp = vPlane[uvIndex];
+
+            // Convert YUV -> RGB
+            int r = (yp + vp * 1436 / 1024 - 179).clamp(0, 255).toInt();
+            int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91)
+                .clamp(0, 255)
+                .toInt();
+            int b = (yp + up * 1814 / 1024 - 227).clamp(0, 255).toInt();
+
+            imgImage.setPixelRgb(x, y, r, g, b);
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('YUV conversion error: $e');
+    }
+
+    return imgImage;
+  }
+
+
+  void showCapturePopup(String mood) {
     final dog = dataController.currentDog.value;
     if (dog == null) return;
 
@@ -134,9 +276,7 @@ class HomeController extends GetxController {
                 // Dog info boxes
                 _infoBox("Name: ${dog.name}"),
                 const SizedBox(height: 8),
-                _infoBox("Detected Breed: $detectedBreed"),
-                const SizedBox(height: 8),
-                _infoBox("Registered Breed: ${dog.type}"),
+                _infoBox("Breed: ${_detectedBreed ?? dog.type}"),
                 const SizedBox(height: 8),
                 _infoBox("Mood: $mood"),
                 const SizedBox(height: 8),
@@ -168,7 +308,7 @@ class HomeController extends GetxController {
                     ),
                     onPressed: () async {
                       dog.info = infoController.text; // save additional info
-                      await _saveResult(mood, detectedBreed);
+                      await _saveResult(mood, _detectedBreed ?? dog.type);
                       Get.back();
                     },
                     child: const Text(
@@ -188,7 +328,7 @@ class HomeController extends GetxController {
   Widget _infoBox(String text) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
         color: Colors.grey[200],
         borderRadius: BorderRadius.circular(8),
@@ -203,7 +343,7 @@ class HomeController extends GetxController {
   }
 
 
-  Future<void> _saveResult(String mood, String detectedBreed) async {
+  Future<void> _saveResult(String mood, String breed) async {
     final dog = dataController.currentDog.value;
     final userPhone = dataController.currentPhone;
     if (dog == null || userPhone == null) return;
@@ -215,8 +355,7 @@ class HomeController extends GetxController {
     final saveData = {
       'dogName': dog.name,
       'mood': mood,
-      'detectedBreed': detectedBreed,
-      'registeredBreed': dog.type,
+      'breed': breed,
       'dateSave': dateNow.toIso8601String(),
       'info': dog.info,
     };
@@ -228,14 +367,14 @@ class HomeController extends GetxController {
     print("Saved scan: $saveData");
   }
 
-  // Start Scan - detects mood and saves to database
+  // Start Scan - uses registered dog breed, detects mood and saves to database
   Future<void> startScan() async {
-    await initCamera(saveMode: true);
+    await initCamera(saveMode: true, quickScan: false);
   }
 
-  // Quick Scan - detects mood only, no saving
+  // Quick Scan - detects breed first, then mood, no saving
   Future<void> quickScan() async {
-    await initCamera(saveMode: false);
+    await initCamera(saveMode: false, quickScan: true);
   }
 
   void _updateFPS() {
@@ -256,17 +395,26 @@ class HomeController extends GetxController {
   }
 
   Future<void> disposeCamera() async {
-    await cameraController?.stopImageStream();
-    await cameraController?.dispose();
-    isCameraInitialized.value = false;
-    _lastFrameTime = null;
-    _frameCount = 0;
+    try {
+      _isProcessing = false;
+      await cameraController?.stopImageStream();
+      await cameraController?.dispose();
+      cameraController = null;
+      isCameraInitialized.value = false;
+      _lastFrameTime = null;
+      _frameCount = 0;
+      
+      // Force garbage collection
+      await Future.delayed(const Duration(milliseconds: 100));
+    } catch (e) {
+      debugPrint('Error disposing camera: $e');
+    }
   }
 
   @override
   void onClose() {
     disposeCamera();
-    breedMoodDetector.dispose();
+    tfliteService.dispose();
     super.onClose();
   }
 }
