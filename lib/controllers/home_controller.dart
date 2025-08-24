@@ -1,14 +1,14 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import '../services/tf_service.dart';
+import '../services/breed_mood_detector.dart';
 import 'model_controller.dart';
 import 'data_controller.dart';
 import 'package:intl/intl.dart';
 
 
 class HomeController extends GetxController {
-  final TFLiteService tfliteService = TFLiteService();
+  final BreedMoodDetector breedMoodDetector = BreedMoodDetector();
   final DataController dataController = Get.find<DataController>();
   final modelController = ModelController();
 
@@ -31,6 +31,9 @@ class HomeController extends GetxController {
     _saveToDatabase = saveMode;
     _hasSaved = false;
 
+    // Initialize breed-mood detector
+    await breedMoodDetector.initialize();
+    
     cameras = await availableCameras();
 
     if (cameras != null && cameras!.isNotEmpty) {
@@ -64,41 +67,23 @@ class HomeController extends GetxController {
     _updateFPS();
 
     try {
-      final dog = dataController.currentDog.value;
-      if (dog == null) {
-        resultText.value = "No dog registered";
+      // Use unified breed-mood detector
+      final result = await breedMoodDetector.detectBreedAndMood(cameraImage);
+      
+      if (result == null) {
+        resultText.value = "Position dog in frame";
         return;
       }
 
-      final results = await tfliteService.processCameraImage(cameraImage, breed: dog.type);
-
-      if (results.isNotEmpty) {
-        results.sort((a, b) => b.confidence.compareTo(a.confidence));
-        final topResult = results.first;
-        
-        // Only show results with 70% or higher confidence
-        if (topResult.confidence >= 0.7) {
-          final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
-          
-          if (_saveToDatabase) {
-            resultText.value = "$modeText ${topResult.label} - ${dog.type}";
-          } else {
-            resultText.value = "$modeText ${topResult.label}";
-          }
-          
-          fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
-          
-          if (_saveToDatabase && !_hasSaved) {
-            _hasSaved = true;
-            Future.delayed(const Duration(seconds: 3), () {
-              showCapturePopup(topResult.label);
-            });
-          }
-        } else {
-          resultText.value = "Detecting ${dog.type} mood (${(topResult.confidence * 100).toInt()}%)";
-        }
-      } else {
-        resultText.value = "Position your ${dog.type}";
+      final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
+      resultText.value = "$modeText ${result.mood} - ${result.breed}";
+      fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
+      
+      if (_saveToDatabase && !_hasSaved) {
+        _hasSaved = true;
+        Future.delayed(const Duration(seconds: 3), () {
+          showCapturePopup(result.mood, result.breed);
+        });
       }
     } catch (e) {
       debugPrint("Error in processFrame: $e");
@@ -107,7 +92,7 @@ class HomeController extends GetxController {
   }
 
 
-  void showCapturePopup(String mood) {
+  void showCapturePopup(String mood, String detectedBreed) {
     final dog = dataController.currentDog.value;
     if (dog == null) return;
 
@@ -149,7 +134,9 @@ class HomeController extends GetxController {
                 // Dog info boxes
                 _infoBox("Name: ${dog.name}"),
                 const SizedBox(height: 8),
-                _infoBox("Breed: ${dog.type}"),
+                _infoBox("Detected Breed: $detectedBreed"),
+                const SizedBox(height: 8),
+                _infoBox("Registered Breed: ${dog.type}"),
                 const SizedBox(height: 8),
                 _infoBox("Mood: $mood"),
                 const SizedBox(height: 8),
@@ -181,7 +168,7 @@ class HomeController extends GetxController {
                     ),
                     onPressed: () async {
                       dog.info = infoController.text; // save additional info
-                      await _saveResult(mood);
+                      await _saveResult(mood, detectedBreed);
                       Get.back();
                     },
                     child: const Text(
@@ -216,7 +203,7 @@ class HomeController extends GetxController {
   }
 
 
-  Future<void> _saveResult(String mood) async {
+  Future<void> _saveResult(String mood, String detectedBreed) async {
     final dog = dataController.currentDog.value;
     final userPhone = dataController.currentPhone;
     if (dog == null || userPhone == null) return;
@@ -228,6 +215,8 @@ class HomeController extends GetxController {
     final saveData = {
       'dogName': dog.name,
       'mood': mood,
+      'detectedBreed': detectedBreed,
+      'registeredBreed': dog.type,
       'dateSave': dateNow.toIso8601String(),
       'info': dog.info,
     };
@@ -277,7 +266,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     disposeCamera();
-    tfliteService.dispose();
+    breedMoodDetector.dispose();
     super.onClose();
   }
 }

@@ -49,7 +49,15 @@ class TFLiteService {
   }
 
   Future<List<TFLiteResult>> processCameraImage(CameraImage image, {String? breed}) async {
-    if (breed == null || !_interpreters.containsKey(breed)) return [];
+    if (breed == null || !_interpreters.containsKey(breed)) {
+      // If breed not found, try to load the model
+      if (breed != null) {
+        await _loadSpecificModel(breed);
+        if (!_interpreters.containsKey(breed)) return [];
+      } else {
+        return [];
+      }
+    }
 
     final interpreter = _interpreters[breed]!;
 
@@ -129,6 +137,24 @@ class TFLiteService {
     }
 
     return imgImage;
+  }
+
+  Future<void> _loadSpecificModel(String breed) async {
+    final modelPaths = {
+      'Pomeranian': 'assets/models/pomeranian_mood.tflite',
+      'Pug': 'assets/models/pug_mood.tflite',
+      'Shih Tzu': 'assets/models/shih_tzu_mood.tflite',
+    };
+
+    if (modelPaths.containsKey(breed) && !_interpreters.containsKey(breed)) {
+      try {
+        final interpreter = await Interpreter.fromAsset(modelPaths[breed]!);
+        _interpreters[breed] = interpreter;
+        print("✅ $breed model loaded successfully");
+      } catch (e) {
+        print('❌ Error loading $breed model: $e');
+      }
+    }
   }
 
   void dispose() {
