@@ -49,4 +49,4 @@ flutter:
     - assets/images/logo_main_zoomed.png
     - assets/images/paw.png
     - assets/models/dog_classification.tflite
-    - assets/models/dog_mood_lite0_float32_7_2.tflite
+    - assets/models/dog_mood_lite0_float32_7_3.tflite

@@ -220,12 +220,14 @@ class _StartScanPageState extends State<StartScanPage> {
 
           return Stack(
             children: [
-              FittedBox(
-                fit: BoxFit.cover,
+              Center(
                 child: SizedBox(
-                  width: c.cameraController!.value.previewSize!.height,
-                  height: c.cameraController!.value.previewSize!.width,
-                  child: CameraPreview(c.cameraController!),
+                  width: MediaQuery.of(context).size.width * 0.5,
+                  height: MediaQuery.of(context).size.height * 0.35,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: CameraPreview(c.cameraController!),
+                  ),
                 ),
               ),
               Positioned(
