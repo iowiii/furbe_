@@ -11,7 +11,7 @@ class ModelController {
 
   Future<void> loadModel() async {
     try {
-      _interpreter = await Interpreter.fromAsset('assets/models/dog_mood_efficientnetb0_float32_v4.tflite');
+      _interpreter = await Interpreter.fromAsset('assets/models/dog_mood_lite0_float32_7_2.tflite');
       _isModelLoaded = true;
     } catch (e) {
       print('Error loading model: $e');

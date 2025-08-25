@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/data_controller.dart';
-import '../../services/inference_service.dart';
 import 'package:image_picker/image_picker.dart';
 
 class RegisteredDogsView extends StatefulWidget {
@@ -92,20 +91,8 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
     final dogNameController = TextEditingController();
     String? gender;
     String? selectedBreed;
-    String detectedBreed = "Detecting...";
 
     final breeds = ["Shih Tzu", "Pug", "Pomeranian"];
-
-    // Detect breed using AI
-    try {
-      final result = await InferenceService.detectBreed(pickedFile.path);
-      detectedBreed =
-          '${result['label']} (${(result['confidence'] * 100).toStringAsFixed(1)}%)';
-      selectedBreed = result['label'];
-    } catch (e) {
-      detectedBreed = "Detection failed";
-      // Don't auto-set selectedBreed, let user choose
-    }
 
     final confirmed = await Get.dialog<bool>(
       Dialog(
@@ -156,15 +143,6 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                             await _picker.pickImage(source: newSource);
                         if (newFile != null) {
                           pickedFile = newFile;
-                          try {
-                            final result = await InferenceService.detectBreed(
-                                pickedFile.path);
-                            detectedBreed =
-                                '${result['label']} (${(result['confidence'] * 100).toStringAsFixed(1)}%)';
-                            selectedBreed = result['label'];
-                          } catch (e) {
-                            detectedBreed = "Detection failed";
-                          }
                           setDialogState(() {});
                         }
                       }
@@ -195,22 +173,7 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                StatefulBuilder(
-                  builder: (context, setTextState) => Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Text(
-                      'Detected: $detectedBreed',
-                      style: const TextStyle(
-                        fontSize: 14,
-                        color: Color(0xFFE15C31),
-                        fontWeight: FontWeight.w500,
-                      ),
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
+
                 const SizedBox(height: 20),
                 TextField(
                   controller: dogNameController,
@@ -280,7 +243,7 @@ class _RegisteredDogsViewState extends State<RegisteredDogsView> {
                       DropdownButtonFormField<String>(
                     value: selectedBreed,
                     decoration: InputDecoration(
-                      labelText: 'Breed (AI Detected)',
+                      labelText: 'Breed',
                       // label when not focused
                       labelStyle: const TextStyle(
                         color: Colors.grey,

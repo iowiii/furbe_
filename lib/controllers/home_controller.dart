@@ -112,7 +112,7 @@ class HomeController extends GetxController {
         final topResult = results.first;
         
         // Only show results with 70% or higher confidence
-        if (topResult.confidence >= 0.65) {
+        if (topResult.confidence >= 0.6) {
           final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
           final breedText = _detectedBreed != null ? " - $_detectedBreed" : "";
           
@@ -121,18 +121,16 @@ class HomeController extends GetxController {
           
           if (_saveToDatabase && !_hasSaved) {
             _hasSaved = true;
-            Future.delayed(const Duration(seconds: 2), () {
-              showCapturePopup(topResult.label);
-            });
+            showCapturePopup(topResult.label);
           }
         } else {
           final breedText = _detectedBreed ?? "dog";
           resultText.value = "Detecting $breedText mood (${(topResult.confidence * 100).toInt()}%)";
         }
-      } else {
-        final breedText = _detectedBreed ?? "dog";
-        resultText.value = "Position your $breedText";
-      }
+      } //else {
+        //final breedText = _detectedBreed ?? "dog";
+        //resultText.value = "Position your $breedText";
+      //}
     } catch (e) {
       debugPrint("Error in processFrame: $e");
       resultText.value = "Error detecting mood";

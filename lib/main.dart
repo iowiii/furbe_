@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'core/app_routes.dart';
 import 'core/app_bindings.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -26,7 +27,10 @@ class FurBeApp extends StatelessWidget {
       initialRoute: AppRoutes.splash,
       initialBinding: AppBindings(),
       getPages: AppRoutes.routes,
-      theme: ThemeData(primarySwatch: Colors.deepOrange),
+      theme: ThemeData(
+        primarySwatch: Colors.deepOrange,
+        textTheme: GoogleFonts.poppinsTextTheme(),
+      ),
     );
   }
 }
