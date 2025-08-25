@@ -21,7 +21,6 @@ class HomeView extends StatelessWidget {
             children: [
               GestureDetector(
                 onTap: () {
-                  // 👇 This switches to the Profile tab in your bottom nav
                   Get.find<MainController>().changePage(2);
                 },
                 child: CircleAvatar(

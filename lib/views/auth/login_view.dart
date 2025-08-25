@@ -15,7 +15,7 @@ class _LoginViewState extends State<LoginView> {
   final passCtrl = TextEditingController();
   final auth = Get.find<DataController>();
 
-  bool _obscurePassword = true; // 👈 control for password visibility
+  bool _obscurePassword = true;
 
   @override
   Widget build(BuildContext context) {

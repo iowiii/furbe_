@@ -20,6 +20,7 @@ class HomeController extends GetxController {
   CameraController? cameraController;
   List<CameraDescription>? cameras;
   RxBool isCameraInitialized = false.obs;
+  RxBool isLoading = false.obs;
   RxString resultText = "".obs;
   RxString fpsText = "FPS: 0".obs;
 
@@ -29,24 +30,27 @@ class HomeController extends GetxController {
   String? _detectedBreed;
   bool _breedDetected = false;
   bool _isQuickScan = false;
-  
+
   // FPS tracking
   DateTime? _lastFrameTime;
   int _frameCount = 0;
   double _currentFps = 0.0;
-  
+
   // Memory protection
   int _skipFrameCount = 0;
   static const int _maxSkipFrames = 2;
   bool get mounted => Get.isRegistered<HomeController>();
 
   Future<void> initCamera({bool saveMode = false, bool quickScan = false}) async {
+    // Clean buffer and temp files
+    await _cleanBufferAndTemp();
+
     _saveToDatabase = saveMode;
     _hasSaved = false;
     _detectedBreed = null;
     _breedDetected = false;
     _isQuickScan = quickScan;
-    
+
     // For Start Scan, use registered dog's breed
     if (!_isQuickScan) {
       final dog = dataController.currentDog.value;
@@ -74,7 +78,7 @@ class HomeController extends GetxController {
         _skipFrameCount++;
         if (_skipFrameCount < _maxSkipFrames) return;
         _skipFrameCount = 0;
-        
+
         if (!_isProcessing && mounted) {
           _isProcessing = true;
           processFrame(image).catchError((e) {
@@ -110,15 +114,15 @@ class HomeController extends GetxController {
       if (results.isNotEmpty) {
         results.sort((a, b) => b.confidence.compareTo(a.confidence));
         final topResult = results.first;
-        
+
         // Only show results with 70% or higher confidence
-        if (topResult.confidence >= 0.6) {
+        if (topResult.confidence >= 0.55) {
           final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
           final breedText = _detectedBreed != null ? " - $_detectedBreed" : "";
-          
+
           resultText.value = "$modeText ${topResult.label}$breedText";
           fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
-          
+
           if (_saveToDatabase && !_hasSaved) {
             _hasSaved = true;
             showCapturePopup(topResult.label);
@@ -150,7 +154,7 @@ class HomeController extends GetxController {
 
       // Detect breed using inference service
       final breedResult = await InferenceService.detectBreed(tempFile.path);
-      
+
       if (breedResult['label'] != 'Unknown' && breedResult['confidence'] > 0.6) {
         _detectedBreed = breedResult['label'];
         _breedDetected = true;
@@ -165,7 +169,6 @@ class HomeController extends GetxController {
       }
     } catch (e) {
       debugPrint("Error detecting breed: $e");
-      // Fallback: proceed with mood detection without breed
       _breedDetected = true;
       resultText.value = "Proceeding with mood detection...";
     }
@@ -182,11 +185,10 @@ class HomeController extends GetxController {
   }
 
   img.Image _yuv420ToImage(CameraImage image) {
-    // Limit image size to prevent memory overflow
     final maxDimension = 320;
     final width = image.width > maxDimension ? maxDimension : image.width;
     final height = image.height > maxDimension ? maxDimension : image.height;
-    
+
     final imgImage = img.Image(width: width, height: height);
 
     try {
@@ -204,10 +206,10 @@ class HomeController extends GetxController {
         for (int x = 0; x < width; x++) {
           final srcX = (x * scaleX).toInt();
           final srcY = (y * scaleY).toInt();
-          
+
           final uvIndex = uvPixelStride * (srcX ~/ 2) + uvRowStride * (srcY ~/ 2);
           final yIndex = srcY * image.planes[0].bytesPerRow + srcX;
-          
+
           if (yIndex < yPlane.length && uvIndex < uPlane.length && uvIndex < vPlane.length) {
             final yp = yPlane[yIndex];
             final up = uPlane[uvIndex];
@@ -305,9 +307,21 @@ class HomeController extends GetxController {
                       ),
                     ),
                     onPressed: () async {
-                      dog.info = infoController.text; // save additional info
+                      dog.info = infoController.text;
                       await _saveResult(mood, _detectedBreed ?? dog.type);
                       Get.back();
+
+                      // Close camera and show loading
+                      await disposeCamera();
+                      isLoading.value = true;
+                      resultText.value = "Cleaning and preparing camera...";
+
+                      // Clean and restart camera
+                      await _cleanBufferAndTemp();
+                      await initCamera(saveMode: _saveToDatabase, quickScan: _isQuickScan);
+
+                      isLoading.value = false;
+                      resultText.value = "";
                     },
                     child: const Text(
                       "Save",
@@ -382,7 +396,7 @@ class HomeController extends GetxController {
       if (timeDiff > 0) {
         _currentFps = 1000.0 / timeDiff;
         _frameCount++;
-        
+
         // Update FPS display every 10 frames
         if (_frameCount % 10 == 0) {
           fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
@@ -390,6 +404,29 @@ class HomeController extends GetxController {
       }
     }
     _lastFrameTime = now;
+  }
+
+  Future<void> _cleanBufferAndTemp() async {
+    try {
+      // Clear temp directory
+      final tempDir = await getTemporaryDirectory();
+      if (await tempDir.exists()) {
+        await for (final file in tempDir.list()) {
+          if (file is File) {
+            await file.delete().catchError((_) {});
+          }
+        }
+      }
+
+      // Reset processing flags
+      _isProcessing = false;
+      _skipFrameCount = 0;
+
+      // Force garbage collection with longer delay for thorough cleaning
+      await Future.delayed(const Duration(milliseconds: 200));
+    } catch (e) {
+      debugPrint('Error cleaning buffer and temp: $e');
+    }
   }
 
   Future<void> disposeCamera() async {
@@ -401,7 +438,7 @@ class HomeController extends GetxController {
       isCameraInitialized.value = false;
       _lastFrameTime = null;
       _frameCount = 0;
-      
+
       // Force garbage collection
       await Future.delayed(const Duration(milliseconds: 100));
     } catch (e) {
