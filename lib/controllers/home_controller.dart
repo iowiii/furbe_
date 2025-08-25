@@ -38,8 +38,17 @@ class HomeController extends GetxController {
 
   // Memory protection
   int _skipFrameCount = 0;
-  static const int _maxSkipFrames = 2;
+  static const int _maxSkipFrames = 60;
   bool get mounted => Get.isRegistered<HomeController>();
+
+  // EMA smoothing and stability gate
+  List<double>? _pEma;
+  static const double _alpha = 0.4;
+  static const double _threshold = 0.45;
+  int _stableCount = 0;
+  static const int _k = 2;
+  int _lastIdx = -1;
+  final List<String> _moodLabels = ['happy', 'sad', 'angry', 'scared'];
 
   Future<void> initCamera({bool saveMode = false, bool quickScan = false}) async {
     // Clean buffer and temp files
@@ -54,10 +63,8 @@ class HomeController extends GetxController {
     // For Start Scan, use registered dog's breed
     if (!_isQuickScan) {
       final dog = dataController.currentDog.value;
-      if (dog != null) {
-        _detectedBreed = dog.type;
-        _breedDetected = true;
-      }
+      _detectedBreed = dog?.type;
+      _breedDetected = dog != null;
     }
 
     cameras = await availableCameras();
@@ -65,7 +72,7 @@ class HomeController extends GetxController {
     if (cameras != null && cameras!.isNotEmpty) {
       cameraController = CameraController(
         cameras!.first,
-        ResolutionPreset.low, // Further reduced to prevent memory issues
+        ResolutionPreset.medium, // Medium resolution with heavy frame skipping
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
@@ -73,24 +80,44 @@ class HomeController extends GetxController {
       await cameraController!.initialize();
       isCameraInitialized.value = true;
 
-      cameraController!.startImageStream((CameraImage image) {
-        // Skip frames to reduce processing load
-        _skipFrameCount++;
-        if (_skipFrameCount < _maxSkipFrames) return;
-        _skipFrameCount = 0;
+      try {
+        cameraController!.startImageStream((CameraImage image) {
+          // Skip frames to reduce processing load
+          _skipFrameCount++;
+          if (_skipFrameCount < _maxSkipFrames) {
+            return; // Drop frame immediately to prevent buffer overflow
+          }
+          _skipFrameCount = 0;
 
-        if (!_isProcessing && mounted) {
-          _isProcessing = true;
-          processFrame(image).catchError((e) {
-            debugPrint('Frame processing error: $e');
-          }).whenComplete(() {
-            // Increased delay to prevent memory overflow
-            Future.delayed(const Duration(milliseconds: 800), () {
-              _isProcessing = false;
+          // Only process if not already processing and controller exists
+          if (!_isProcessing && mounted && cameraController != null) {
+            _isProcessing = true;
+            processFrame(image).catchError((e) {
+              debugPrint('Frame processing error: $e');
+            }).whenComplete(() {
+              // Increased delay to prevent memory overflow
+              Future.delayed(const Duration(milliseconds: 5000), () {
+                if (mounted) {
+                  _isProcessing = false;
+                  // Force GC after processing
+                  Future.microtask(() {});
+                }
+              });
             });
-          });
-        }
-      });
+          }
+        });
+      } catch (e) {
+        debugPrint('Error starting image stream: $e');
+        resultText.value = "Camera error - restarting...";
+        // Attempt recovery
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            disposeCamera().then((_) => 
+              initCamera(saveMode: _saveToDatabase, quickScan: _isQuickScan)
+            );
+          }
+        });
+      }
     } else {
       resultText.value = "No camera found";
     }
@@ -112,29 +139,36 @@ class HomeController extends GetxController {
       final results = await tfliteService.processCameraImageForMood(cameraImage);
 
       if (results.isNotEmpty) {
-        results.sort((a, b) => b.confidence.compareTo(a.confidence));
-        final topResult = results.first;
+        // Convert results to probability array
+        final probs = List<double>.filled(4, 0.0);
+        for (final result in results) {
+          final idx = _moodLabels.indexOf(result.label.toLowerCase());
+          if (idx >= 0) probs[idx] = result.confidence;
+        }
 
-        // Only show results with 70% or higher confidence
-        if (topResult.confidence >= 0.55) {
+        // Apply EMA smoothing
+        final smoothedProbs = _smoothProbs(probs);
+        final stableMoodIdx = _decide(smoothedProbs);
+
+        if (stableMoodIdx >= 0) {
+          final stableMood = _moodLabels[stableMoodIdx];
+          final confidence = smoothedProbs[stableMoodIdx];
+          
           final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
           final breedText = _detectedBreed != null ? " - $_detectedBreed" : "";
 
-          resultText.value = "$modeText ${topResult.label}$breedText";
+          resultText.value = "$modeText $stableMood$breedText";
           fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
 
-          if (_saveToDatabase && !_hasSaved) {
+          if (_saveToDatabase && !_hasSaved && confidence >= 0.45) {
             _hasSaved = true;
-            showCapturePopup(topResult.label);
+            showCapturePopup(stableMood);
           }
         } else {
           final breedText = _detectedBreed ?? "dog";
-          resultText.value = "Detecting $breedText mood (${(topResult.confidence * 100).toInt()}%)";
+          resultText.value = "Analyzing $breedText mood...";
         }
-      } //else {
-        //final breedText = _detectedBreed ?? "dog";
-        //resultText.value = "Position your $breedText";
-      //}
+      }
     } catch (e) {
       debugPrint("Error in processFrame: $e");
       resultText.value = "Error detecting mood";
@@ -185,7 +219,7 @@ class HomeController extends GetxController {
   }
 
   img.Image _yuv420ToImage(CameraImage image) {
-    final maxDimension = 320;
+    final maxDimension = 224;
     final width = image.width > maxDimension ? maxDimension : image.width;
     final height = image.height > maxDimension ? maxDimension : image.height;
 
@@ -233,13 +267,12 @@ class HomeController extends GetxController {
     return imgImage;
   }
 
-
   void showCapturePopup(String mood) {
     final dog = dataController.currentDog.value;
     if (dog == null) return;
 
     final dateNow = DateTime.now();
-    final infoController = TextEditingController(text: ""); // reset on scan
+    final infoController = TextEditingController(text: "");
 
     Get.dialog(
       Dialog(
@@ -254,7 +287,6 @@ class HomeController extends GetxController {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Title row
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -272,8 +304,6 @@ class HomeController extends GetxController {
                   ],
                 ),
                 const SizedBox(height: 16),
-
-                // Dog info boxes
                 _infoBox("Name: ${dog.name}"),
                 const SizedBox(height: 8),
                 _infoBox("Breed: ${_detectedBreed ?? dog.type}"),
@@ -283,23 +313,25 @@ class HomeController extends GetxController {
                 _infoBox("Date: ${DateFormat('MMM dd, yyyy HH:mm').format(dateNow)}"),
                 const SizedBox(height: 12),
 
-                // Additional info input
+                // ⬇️ TextField with filled grey background + grey cursor
                 TextField(
                   controller: infoController,
-                  decoration: const InputDecoration(
+                  cursorColor: Colors.grey.shade100, // cursor color
+                  decoration: InputDecoration(
                     labelText: 'Additional Info',
-                    border: OutlineInputBorder(),
+                    filled: true,
+                    fillColor: Colors.grey.shade100, // input box background
+                    border: const OutlineInputBorder(),
                   ),
                   maxLines: 2,
                 ),
-                const SizedBox(height: 20),
 
-                // Save button full width
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
+                      backgroundColor: const Color(0xFFE15C31), // ⬅️ new button color
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
@@ -337,6 +369,7 @@ class HomeController extends GetxController {
     );
   }
 
+
   Widget _infoBox(String text) {
     return Container(
       width: double.infinity,
@@ -353,7 +386,6 @@ class HomeController extends GetxController {
       ),
     );
   }
-
 
   Future<void> _saveResult(String mood, String breed) async {
     final dog = dataController.currentDog.value;
@@ -376,15 +408,13 @@ class HomeController extends GetxController {
         .child('accounts/$userPhone/saves/${dog.id}/$saveId')
         .set(saveData);
 
-    print("Saved scan: $saveData");
+    debugPrint("Saved scan: $saveData");
   }
 
-  // Start Scan - uses registered dog breed, detects mood and saves to database
   Future<void> startScan() async {
     await initCamera(saveMode: true, quickScan: false);
   }
 
-  // Quick Scan - detects breed first, then mood, no saving
   Future<void> quickScan() async {
     await initCamera(saveMode: false, quickScan: true);
   }
@@ -397,7 +427,6 @@ class HomeController extends GetxController {
         _currentFps = 1000.0 / timeDiff;
         _frameCount++;
 
-        // Update FPS display every 10 frames
         if (_frameCount % 10 == 0) {
           fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
         }
@@ -406,14 +435,42 @@ class HomeController extends GetxController {
     _lastFrameTime = now;
   }
 
+  List<double> _smoothProbs(List<double> pNew) {
+    if (_pEma == null) _pEma = List.from(pNew);
+    for (int i = 0; i < pNew.length; i++) {
+      _pEma![i] = _alpha * pNew[i] + (1 - _alpha) * _pEma![i];
+    }
+    return List.from(_pEma!);
+  }
+
+  int _decide(List<double> p) {
+    final maxVal = p.reduce((a, b) => a > b ? a : b);
+    final idx = p.indexOf(maxVal);
+    if (maxVal >= _threshold) {
+      if (idx == _lastIdx) {
+        _stableCount++;
+      } else {
+        _stableCount = 1;
+      }
+      _lastIdx = idx;
+      if (_stableCount >= _k) return idx;
+    }
+    return _lastIdx;
+  }
+
   Future<void> _cleanBufferAndTemp() async {
     try {
+      // Reset EMA state
+      _pEma = null;
+      _stableCount = 0;
+      _lastIdx = -1;
+      
       // Clear temp directory
       final tempDir = await getTemporaryDirectory();
       if (await tempDir.exists()) {
         await for (final file in tempDir.list()) {
           if (file is File) {
-            await file.delete().catchError((_) {});
+            await file.delete().catchError((_) => file);
           }
         }
       }
@@ -422,8 +479,12 @@ class HomeController extends GetxController {
       _isProcessing = false;
       _skipFrameCount = 0;
 
-      // Force garbage collection with longer delay for thorough cleaning
-      await Future.delayed(const Duration(milliseconds: 200));
+      // Aggressive memory cleanup
+      await Future.delayed(const Duration(milliseconds: 500));
+      for (int i = 0; i < 3; i++) {
+        await Future.microtask(() {});
+        await Future.delayed(const Duration(milliseconds: 50));
+      }
     } catch (e) {
       debugPrint('Error cleaning buffer and temp: $e');
     }
@@ -432,17 +493,23 @@ class HomeController extends GetxController {
   Future<void> disposeCamera() async {
     try {
       _isProcessing = false;
-      await cameraController?.stopImageStream();
+      
+      if (cameraController?.value.isStreamingImages == true) {
+        await cameraController?.stopImageStream();
+        await Future.delayed(const Duration(milliseconds: 300));
+      }
+      
       await cameraController?.dispose();
       cameraController = null;
       isCameraInitialized.value = false;
       _lastFrameTime = null;
       _frameCount = 0;
 
-      // Force garbage collection
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 500));
     } catch (e) {
       debugPrint('Error disposing camera: $e');
+      cameraController = null;
+      isCameraInitialized.value = false;
     }
   }
 

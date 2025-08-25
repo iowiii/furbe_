@@ -9,6 +9,47 @@ import '../../controllers/main_controller.dart';
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
 
+  void _showTutorial(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('How to use FurBe'),
+        content: const SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Start Scan', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('• Continuous scanning for your dog.'),
+              Text('• Finalizes a mood and adds it to your Logs.'),
+              Text('• Best results: keep the dog\'s face centered and the camera steady.'),
+              SizedBox(height: 12),
+              Text('Quick Scan', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('• One-tap scan for any dog.'),
+              Text('• Step 1: Detects the breed.'),
+              Text('• Step 2: Detects the mood.'),
+              Text('• The result (breed, mood, confidence) appears at the bottom of the screen.'),
+              Text('• Quick Scan does not save results.'),
+              SizedBox(height: 12),
+              Text('History', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('• View all moods logged today and past days.'),
+              Text('• Toggle between a List view and an Event Timeline.'),
+              SizedBox(height: 12),
+              Text('Profile', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('• To add a dog: Profile > Settings > Register Dog.'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Got it!', style: TextStyle(color: Color(0xFFE15C31)),),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -113,6 +154,14 @@ class HomeView extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
           ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showTutorial(context),
+        backgroundColor: const Color(0xFFE15C31),
+        child: const Icon(
+          Icons.help_outline,
+          color: Colors.white,
         ),
       ),
     );

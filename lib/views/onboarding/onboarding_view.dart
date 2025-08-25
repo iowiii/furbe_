@@ -25,8 +25,7 @@ class _OnboardingViewState extends State<OnboardingView> {
     {
       'head': 'What else?',
       'text': '• Track your dog\'s mood through historical data\n'
-          '• Quick scan to detect another dog\'s mood\n'
-          '• Get insights on what to do depending on your dog\'s mood'
+          '• Quick scan to detect another dog\'s mood'
     },
   ];
 
