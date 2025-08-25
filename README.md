@@ -1,16 +1,30 @@
-# furbe
+# FurBe — Dog Mood Detector 🐶📱
 
-A new Flutter project for research.
+FurBe is a Flutter mobile app that detects a dog’s emotion in real time using an on-device TensorFlow Lite model. It classifies frames into **Happy**, **Sad**, **Angry**, and **Scared**, aggregates decisions across multiple frames for stability, and logs results for later analysis.
 
-## Getting Started
+> Built with **Flutter** (GetX, Camera) and an image classifier trained in **TensorFlow/Keras**, exported to **TFLite** and integrated via **tflite_flutter 0.11.0**.
 
-This project is a starting point for a Flutter application.
+---
 
-A few resources to get you started if this is your first Flutter project:
+## Features
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- 🎥 **Real-time inference** from the device camera
+- 🧠 **TFLite model** (EfficientNet/MobileNet backbone) — runs fully offline
+- 🧮 **Bagged decisions**: averages softmax across **10 frames** before finalizing a mood
+- ✅ **Confidence gating**: only save results with **≥ 60%** confidence (configurable)
+- 📊 **Analysis view** with daily logs, calendar overview, and notes
+- 📚 **Articles screen** linking to curated learning resources
+- 👤 **Profiles** for dogs (name, gender, breed, birthdate, photo)
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+---
+
+## App Screens
+
+- **Home** – quick navigation and status  
+- **Start Scan** – continuous detection; finalizes a mood every few seconds using 10-frame averaging  
+- **Quick Scan** – single detection flow  
+- **Analysis** – calendar overview + list of logged moods; add notes  
+- **Articles** – links/resources for dog behavior  
+- **Profile** – dog profile and settings  
+
+
