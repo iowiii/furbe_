@@ -67,4 +67,11 @@ class ModelController {
       return 'no_dog';
     }
   }
+  void dispose() {
+    if (_isModelLoaded) {
+      _interpreter.close();
+      _isModelLoaded = false;
+      print('Model disposed');
+    }
+  }
 }

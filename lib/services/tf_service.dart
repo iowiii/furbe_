@@ -178,5 +178,6 @@ class TFLiteService {
     _breedInterpreter?.close();
     _moodInterpreter = null;
     _breedInterpreter = null;
+
   }
 }

@@ -152,6 +152,8 @@ class HomeController extends GetxController {
         if (_saveToDatabase && !_hasSaved) {
           _hasSaved = true;
           showCapturePopup(topLabel);
+        } else if (!_saveToDatabase) {
+          resultText.value = "$topLabel - ${_detectedBreed ?? 'dog'} (Quick scan)";
         }
       } else {
         final breedText = _detectedBreed ?? "dog";
@@ -359,9 +361,10 @@ class HomeController extends GetxController {
                     ),
                     onPressed: () async {
                       dog.info = infoController.text;
-                      await _saveResult(mood, _detectedBreed ?? dog.type);
+                      if (_saveToDatabase) {
+                        await _saveResult(mood, _detectedBreed ?? dog.type);
+                      }
                       Get.back();
-
                       // Restart camera
                       await disposeCamera();
                       isLoading.value = true;
@@ -422,11 +425,24 @@ class HomeController extends GetxController {
       'info': dog.info,
     };
 
-    await dataController.firebaseService.db
-        .child('accounts/$userPhone/saves/${dog.id}/$saveId')
-        .set(saveData);
-
     print("Saved scan: $saveData");
+    try {
+      await dataController.firebaseService.db
+          .child('accounts/$userPhone/saves/${dog.id}')
+          .update({ saveId: saveData });
+
+      print("FurBe saved scan: $saveData");
+    } catch (e) {
+      print("FurBe save failed for $saveId: $e");
+      try {
+        await dataController.firebaseService.db
+            .child('accounts/$userPhone/saves/${dog.id}/$saveId')
+            .remove();
+        print("Rollback: Removed incomplete save $saveId");
+      } catch (_) {
+        print("Rollback failed for $saveId");
+      }
+    }
   }
 
   Future<void> startScan() async {
@@ -455,15 +471,36 @@ class HomeController extends GetxController {
   Future<void> _cleanBufferAndTemp() async {
     try {
       final tempDir = await getTemporaryDirectory();
+      final failedFiles = <String>[];
+
       if (await tempDir.exists()) {
         await for (final file in tempDir.list()) {
           if (file is File) {
-            await file.delete().catchError((_) {});
+            try {
+              await file.delete();
+            } catch (e) {
+              failedFiles.add(file.path);
+            }
           }
         }
       }
+
       _isProcessing = false;
       _skipFrameCount = 0;
+
+      if (failedFiles.isNotEmpty) {
+        print('FurBe cleanup: Failed to delete files: $failedFiles');
+        await Future.delayed(const Duration(milliseconds: 300));
+        for (final path in failedFiles) {
+          final retryFile = File(path);
+          if (await retryFile.exists()) {
+            try {
+              await retryFile.delete();
+            } catch (_) {}
+          }
+        }
+      }
+
       await Future.delayed(const Duration(milliseconds: 200));
     } catch (e) {
       debugPrint('Error cleaning buffer and temp: $e');
@@ -475,6 +512,7 @@ class HomeController extends GetxController {
       _isProcessing = false;
       await cameraController?.stopImageStream();
       await cameraController?.dispose();
+      modelController.dispose();
       cameraController = null;
       isCameraInitialized.value = false;
       _lastFrameTime = null;
@@ -488,6 +526,7 @@ class HomeController extends GetxController {
   @override
   void onClose() {
     disposeCamera();
+    modelController.dispose();
     tfliteService.dispose();
     super.onClose();
   }
