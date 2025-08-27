@@ -200,10 +200,6 @@ class _RegisterViewState extends State<RegisterView> {
       return;
     }
 
-    String formattedPhone = rawPhone.replaceAll('+', '');
-    if (!formattedPhone.startsWith('63')) {
-      formattedPhone = '63$formattedPhone';
-    }
 
     // Show full-screen loading
     Get.dialog(
@@ -215,23 +211,24 @@ class _RegisterViewState extends State<RegisterView> {
       barrierDismissible: false,
     );
 
+
     try {
       await authController.registerUser(
         name,
         rawPhone,
         password,
-        onCodeSent: (verificationId, resendToken) {
+        onCodeSent: (message) {
           if (!mounted) return;
           Get.back(); // close loading
           Get.toNamed(
             AppRoutes.otp,
             arguments: {
-              'verificationId': verificationId,
               'phone': rawPhone,
               'name': name,
             },
           );
         },
+
         onError: (errorMessage) {
           if (!mounted) return;
           Get.back(); // close loading

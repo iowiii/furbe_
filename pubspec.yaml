@@ -34,6 +34,8 @@ dependencies:
   json_annotation: ^4.9.0
   tflite_flutter: ^0.11.0
   google_fonts: ^6.1.0
+  supabase_flutter: ^2.10.0
+  flutter_dotenv: ^6.0.0
 
 dev_dependencies:
   flutter_test:
@@ -43,6 +45,7 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
+    - .env
     - assets/models/
     - assets/images/logo_bare.png
     - assets/images/logo_main.png

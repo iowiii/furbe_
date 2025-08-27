@@ -13,15 +13,18 @@ class OtpVerificationView extends StatefulWidget {
 class _OtpVerificationViewState extends State<OtpVerificationView> {
   final otpControllers = List.generate(6, (_) => TextEditingController());
   final auth = Get.find<DataController>();
-  late String verificationId;
   late String phone;
 
   @override
   void initState() {
     super.initState();
     final args = Get.arguments as Map<String, dynamic>;
-    verificationId = args['verificationId'];
-    phone = args['phone'];
+    phone = args['phone'] ?? '';
+    if (phone.isEmpty) {
+      // Safety check
+      Get.snackbar('Error', 'Phone number is missing');
+      Get.back();
+    }
   }
 
   Future<void> submitOtp() async {
@@ -30,7 +33,8 @@ class _OtpVerificationViewState extends State<OtpVerificationView> {
       Get.snackbar('Error', 'Please enter all 6 digits');
       return;
     }
-    final success = await auth.verifyOtp(verificationId, otp);
+
+    final success = await auth.verifyOtp(phone, otp); // <-- only phone needed
     if (success) {
       Get.offAllNamed(AppRoutes.otpVerified);
     } else {

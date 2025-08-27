@@ -9,8 +9,11 @@ import '../services/firebase_service.dart';
 import '../models/app_user.dart';
 import '../models/dog.dart' as dog_model;
 import 'package:uuid/uuid.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide User;
+
 
 class DataController extends GetxController {
+  final supabase = Supabase.instance.client;
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseService firebaseService = FirebaseService();
 
@@ -184,38 +187,40 @@ class DataController extends GetxController {
     }
   }
 
-  Future<bool> verifyOtp(String verificationId, String smsCode) async {
+  Future<bool> verifyOtp(String phone, String otpCode) async {
     try {
-      final cred = PhoneAuthProvider.credential(
-        verificationId: verificationId,
-        smsCode: smsCode,
+      String normalizedPhone = phone.replaceAll(RegExp(r'\D'), ''); // remove anything not digits
+      normalizedPhone = '+$normalizedPhone'; // E.164 format
+
+      final response = await supabase.auth.verifyOTP(
+        type: OtpType.sms,
+        phone: normalizedPhone,
+        token: otpCode,
       );
 
-      final userCredential = await _auth.signInWithCredential(cred);
-      final firebaseUser = userCredential.user;
-
-      if (firebaseUser != null && firebaseUser.phoneNumber != null) {
-        final normalizedPhone = firebaseUser.phoneNumber!;
+      if (response.user != null) {
         currentPhone = normalizedPhone;
-        await loadAppUser(normalizedPhone);
+        await loadAppUser(currentPhone!);
+        return true;
       } else {
-        print("⚠️ FirebaseUser or phoneNumber is null");
+        print("⚠️ Supabase verification failed: ${response.user}");
+        return false;
       }
-
-      return true;
     } catch (e) {
       Get.snackbar('OTP Error', e.toString());
       return false;
     }
   }
 
+
   Future<void> registerUser(
       String name,
       String phone,
       String password, {
-        required Function(String verificationId, int? resendToken) onCodeSent,
+        required Function(String message) onCodeSent,
         required Function(String errorMessage) onError,
       }) async {
+
     bool exists = await isPhoneRegistered(phone);
     phone = phone.replaceAll(' ', '');
     if (exists) {
@@ -223,14 +228,13 @@ class DataController extends GetxController {
       return;
     }
 
-    String normalizedPhone = phone.replaceAll('+', '');
-    if (!normalizedPhone.startsWith('63')) {
-      normalizedPhone = '63$normalizedPhone';
-    }
+    String normalizedPhone = phone.replaceAll(RegExp(r'\D'), ''); // remove anything not digits
+    normalizedPhone = '+$normalizedPhone'; // E.164 format
 
-    await firebaseService.db.child('accounts/$phone').set({
+    // Save user details in Firebase DB as before
+    await firebaseService.db.child('accounts/$normalizedPhone').set({
       'name': name,
-      'phone': normalizedPhone,
+      'phone': phone,
       'password': password,
       'saves': {},
       'dogs': {},
@@ -262,32 +266,26 @@ class DataController extends GetxController {
 
   Future<void> startPhoneVerification(
       String phone,
-      Function(String, int?) codeSentCallback,
-      Function(String) verificationFailedCallback,
+      Function(String message) codeSentCallback,
+      Function(String errorMessage) verificationFailedCallback,
       ) async {
-    String formattedPhone = phone.startsWith('+')
-        ? phone.replaceFirst('+', '')
-        : phone;
+    try {
+      String normalizedPhone = phone.replaceAll(RegExp(r'\D'), ''); // digits only
+      normalizedPhone = '+$normalizedPhone'; // E.164 format
 
-    if (!formattedPhone.startsWith('63')) {
-      formattedPhone = '63$formattedPhone';
+      print("Sending OTP to $normalizedPhone...");
+
+      // Send OTP
+      await supabase.auth.signInWithOtp(phone: normalizedPhone);
+
+      print("OTP request completed");
+      codeSentCallback('OTP sent to $normalizedPhone');
+    } catch (e) {
+      print("OTP request failed: $e");
+      verificationFailedCallback(e.toString());
     }
-
-    await _auth.verifyPhoneNumber(
-      phoneNumber: '+$formattedPhone',
-      timeout: const Duration(seconds: 60),
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        await _auth.signInWithCredential(credential);
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        verificationFailedCallback(e.message ?? 'Verification failed');
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        codeSentCallback(verificationId, resendToken);
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {},
-    );
   }
+
 
   List<dog_model.Dog> get userDogs {
     final user = appUser.value;
