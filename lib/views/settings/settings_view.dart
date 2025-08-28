@@ -639,7 +639,8 @@ class AccountInfoPage extends StatelessWidget {
                             final confirm = confirmController.text.trim();
 
                             final user = auth.appUser.value;
-                            final phone = "+${user?.phone}";
+                            final phone = "${user?.phone}";
+
 
                             if (username.isEmpty ||
                                 password.isEmpty ||
