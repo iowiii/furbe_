@@ -6,7 +6,7 @@ import 'package:tflite_flutter/tflite_flutter.dart';
 
 /// Model paths
 const String _breedModelPath = 'assets/models/dog_classification.tflite';
-const String _moodModelPath = 'assets/models/dog_mood_lite0_float32_7_3.tflite';
+const String _moodModelPath = 'assets/models/dog_mood_lite0_float32_7_4.tflite';
 
 /// Class names
 const List<String> breedClasses = ['Pomeranian', 'Pug', 'Shih Tzu'];

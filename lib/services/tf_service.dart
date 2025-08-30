@@ -24,7 +24,7 @@ class TFLiteService {
   Future<void> _loadModels() async {
     try {
       // Load general mood detection model
-      _moodInterpreter = await Interpreter.fromAsset('assets/models/dog_mood_lite0_float32_7_3.tflite');
+      _moodInterpreter = await Interpreter.fromAsset('assets/models/dog_mood_lite0_float32_7_4.tflite');
       print("✅ General mood model loaded successfully");
       
       // Load breed detection model
