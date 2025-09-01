@@ -122,6 +122,7 @@ class _AnalysisViewState extends State<AnalysisView> {
                 style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
               ),
             ),
+
             Container(
               width: 12,
               height: 12,
@@ -130,6 +131,7 @@ class _AnalysisViewState extends State<AnalysisView> {
                 shape: BoxShape.circle,
               ),
             ),
+
             const SizedBox(width: 8),
             if (index < dailySaves.length - 1)
               Container(
@@ -138,6 +140,7 @@ class _AnalysisViewState extends State<AnalysisView> {
                 color: Colors.grey.shade300,
                 margin: const EdgeInsets.only(left: 5),
               ),
+
             const SizedBox(width: 16),
             Expanded(
               child: Container(

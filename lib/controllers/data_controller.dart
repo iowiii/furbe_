@@ -189,7 +189,7 @@ class DataController extends GetxController {
 
   Future<bool> verifyOtp(String phone, String otpCode) async {
     try {
-      String normalizedPhone = phone.replaceAll(RegExp(r'\D'), ''); // remove anything not digits
+      String normalizedPhone = phone.replaceAll(RegExp(r'\D'), '');
       normalizedPhone = '+$normalizedPhone'; // E.164 format
 
       final response = await supabase.auth.verifyOTP(
@@ -228,7 +228,7 @@ class DataController extends GetxController {
       return;
     }
 
-    String normalizedPhone = phone.replaceAll(RegExp(r'\D'), ''); // remove anything not digits
+    String normalizedPhone = phone.replaceAll(RegExp(r'\D'), '');
     normalizedPhone = '+$normalizedPhone'; // E.164 format
 
     // Save user details in Firebase DB as before
