@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import '../core/app_routes.dart';
+import '../controllers/data_controller.dart';
 
 class SplashView extends StatefulWidget {
   const SplashView({super.key});
@@ -36,7 +38,13 @@ class _SplashViewState extends State<SplashView> {
   void _navigateToLogin() async {
     await Future.delayed(const Duration(milliseconds: 500));
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, AppRoutes.login);
+    
+    final dataController = Get.find<DataController>();
+    final autoLoginSuccess = await dataController.tryAutoLogin();
+    
+    if (!autoLoginSuccess) {
+      Navigator.pushReplacementNamed(context, AppRoutes.login);
+    }
   }
 
   @override

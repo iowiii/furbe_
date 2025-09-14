@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/tf_service.dart';
 import '../services/inference_service.dart';
+import '../widgets/performance_metrics_overlay.dart';
 import 'model_controller.dart';
 import 'data_controller.dart';
 import 'package:intl/intl.dart';
@@ -25,8 +26,13 @@ class HomeController extends GetxController {
   RxString fpsText = "FPS: 0".obs;
 
   bool _isProcessing = false;
-  bool _hasSaved = false;
+
+  // --- NEW: Save/pause state ---
   bool _saveToDatabase = false;
+
+  bool _savePromptOpen = false;      // dialog currently visible → pause detection/prompting
+  bool _pauseDetection = false;      // master pause switch while prompting
+  DateTime? _cooldownUntil;          // short cooldown after dialog closes
 
   String? _detectedBreed;
   bool _breedDetected = false;
@@ -37,11 +43,11 @@ class HomeController extends GetxController {
   int _frameCount = 0;
   double _currentFps = 0.0;
 
-  // Memory protection
+  // Frame throttling
   int _skipFrameCount = 0;
   static const int _maxSkipFrames = 2;
 
-  // Post-hoc class bias (1.0 = neutral). Lower < 1.0 to down-weight.
+  // Post-hoc class bias
   final Map<String, double> _biasWeights = {
     'Happy': 2.0,
     'Sad': 1.0,
@@ -55,15 +61,18 @@ class HomeController extends GetxController {
     return s < 0 ? 0.0 : (s > 1.0 ? 1.0 : s);
   }
 
-
   bool get mounted => Get.isRegistered<HomeController>();
 
   Future<void> initCamera({bool saveMode = false, bool quickScan = false}) async {
-    // Clean buffer and temp files
+    // Clean buffer and temp at (re)start
     await _cleanBufferAndTemp();
 
     _saveToDatabase = saveMode;
-    _hasSaved = false;
+
+    _savePromptOpen = false;
+    _pauseDetection = false;
+    _cooldownUntil = null;
+
     _detectedBreed = null;
     _breedDetected = false;
     _isQuickScan = quickScan;
@@ -81,7 +90,7 @@ class HomeController extends GetxController {
     if (cameras != null && cameras!.isNotEmpty) {
       cameraController = CameraController(
         cameras!.first,
-        ResolutionPreset.low, // reduced to prevent memory issues
+        ResolutionPreset.low,
         enableAudio: false,
         imageFormatGroup: ImageFormatGroup.yuv420,
       );
@@ -95,13 +104,16 @@ class HomeController extends GetxController {
         if (_skipFrameCount < _maxSkipFrames) return;
         _skipFrameCount = 0;
 
+        // Hard pause while dialog open or cooldown active
+        if (_pauseDetection || _savePromptOpen) return;
+        if (_cooldownUntil != null && DateTime.now().isBefore(_cooldownUntil!)) return;
+
         if (!_isProcessing && mounted) {
           _isProcessing = true;
           processFrame(image).catchError((e) {
             debugPrint('Frame processing error: $e');
           }).whenComplete(() {
-            // Increased delay to prevent memory overflow
-            Future.delayed(const Duration(milliseconds: 800), () {
+            Future.delayed(const Duration(milliseconds: 600), () {
               _isProcessing = false;
             });
           });
@@ -113,119 +125,101 @@ class HomeController extends GetxController {
   }
 
   Future<void> processFrame(CameraImage cameraImage) async {
+    // Respect pause state defensively
+    if (_pauseDetection || _savePromptOpen) return;
+    if (_cooldownUntil != null && DateTime.now().isBefore(_cooldownUntil!)) return;
+
+    // Update performance metrics
+    final perf = Get.find<PerfMetricsController>();
+    perf.onCameraFrame();
+    perf.onProcessingStart();
+    
     // Calculate FPS
     _updateFPS();
 
-    // Detect mood
-    final results = await tfliteService.processCameraImageForMood(cameraImage);
+    try {
+      // Quick Scan flow: detect breed first; Start Scan already has breed
+      if (_isQuickScan && !_breedDetected) {
+        await _detectBreedFromFrame(cameraImage);
+        return;
+      }
 
-    if (results.isNotEmpty) {
-      // Build a list with adjusted scores
-      final adjusted = results
+      // --- Single detection path with bias & threshold ---
+      final rawResults = await tfliteService.processCameraImageForMood(cameraImage);
+      if (rawResults.isEmpty) {
+        resultText.value = "Detecting ${_detectedBreed ?? 'dog'} mood...";
+        return;
+      }
+
+      // Apply class bias and pick top-1
+      final adjusted = rawResults
           .map((r) => {
         'label': r.label,
         'raw': r.confidence,
         'adj': _biasedScore(r.label, r.confidence),
       })
-          .toList();
+          .toList()
+        ..sort((a, b) => (b['adj'] as double).compareTo(a['adj'] as double));
 
-      // Sort by adjusted score (desc)
-      adjusted.sort((a, b) => (b['adj'] as double).compareTo(a['adj'] as double));
       final top = adjusted.first;
-
       final topLabel = top['label'] as String;
       final adjConf = top['adj'] as double;
       final rawConf = top['raw'] as double;
 
-      // Use the adjusted confidence for gating
       const double acceptThreshold = 0.55;
 
       if (adjConf >= acceptThreshold) {
         final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
         final breedText = _detectedBreed != null ? " - $_detectedBreed" : "";
 
-        // optional: show raw → adjusted for debugging
+        // Show raw→adjusted for transparency
         resultText.value =
         "$modeText $topLabel$breedText  (${(rawConf * 100).toStringAsFixed(0)}%→${(adjConf * 100).toStringAsFixed(0)}%)";
         fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
 
-        if (_saveToDatabase && !_hasSaved) {
-          _hasSaved = true;
+        // If saving mode and no dialog open, prompt once
+        if (_saveToDatabase && !_savePromptOpen) {
+          _savePromptOpen = true;
+          _pauseDetection = true; // pause further processing while dialog is open
           showCapturePopup(topLabel);
-        } else if (!_saveToDatabase) {
+        }
+
+        // Quick Scan: just show best label
+        if (!_saveToDatabase) {
           resultText.value = "$topLabel - ${_detectedBreed ?? 'dog'} (Quick scan)";
         }
       } else {
         final breedText = _detectedBreed ?? "dog";
-        resultText.value =
-        "Detecting $breedText mood (${(adjConf * 100).toInt()}%)";
-      }
-    }
-
-
-    try {
-      // Quick Scan: detect breed first, then mood
-      // Start Scan: use registered breed, detect mood only
-      if (_isQuickScan && !_breedDetected) {
-        await _detectBreedFromFrame(cameraImage);
-        return;
-      }
-
-      // Detect mood
-      final results = await tfliteService.processCameraImageForMood(cameraImage);
-
-      if (results.isNotEmpty) {
-        results.sort((a, b) => b.confidence.compareTo(a.confidence));
-        final topResult = results.first;
-
-        // Only accept results with confidence ≥ 55%
-        if (topResult.confidence >= 0.55) {
-          final modeText = _saveToDatabase ? "[SAVING]" : "[QUICK]";
-          final breedText = _detectedBreed != null ? " - $_detectedBreed" : "";
-          resultText.value = "$modeText ${topResult.label}$breedText";
-          fpsText.value = "FPS: ${_currentFps.toStringAsFixed(1)}";
-
-          if (_saveToDatabase && !_hasSaved) {
-            _hasSaved = true;
-            showCapturePopup(topResult.label);
-          }
-        } else {
-          final breedText = _detectedBreed ?? "dog";
-          resultText.value =
-          "Detecting $breedText mood (${(topResult.confidence * 100).toInt()}%)";
-        }
+        resultText.value = "Detecting $breedText mood (${(adjConf * 100).toInt()}%)";
       }
     } catch (e) {
       debugPrint("Error in processFrame: $e");
       resultText.value = "Error detecting mood";
+    } finally {
+      // Always mark processing end for metrics
+      final perf = Get.find<PerfMetricsController>();
+      perf.onProcessingEnd();
     }
   }
 
   Future<void> _detectBreedFromFrame(CameraImage cameraImage) async {
     try {
-      // Convert image to bytes
       final imageBytes = await _cameraImageToBytes(cameraImage);
       if (imageBytes == null) return;
 
-      // Save temp file
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/temp_breed_detection.jpg');
       await tempFile.writeAsBytes(imageBytes);
 
-      // Detect breed
       final breedResult = await InferenceService.detectBreed(tempFile.path);
-      if (breedResult['label'] != 'Unknown' &&
-          breedResult['confidence'] > 0.6) {
+      if (breedResult['label'] != 'Unknown' && breedResult['confidence'] > 0.6) {
         _detectedBreed = breedResult['label'];
         _breedDetected = true;
-        resultText.value =
-        "Breed detected: $_detectedBreed. Now detecting mood...";
+        resultText.value = "Breed detected: $_detectedBreed. Now detecting mood...";
       } else {
-        resultText.value =
-        "Detecting breed... (${(breedResult['confidence'] * 100).toInt()}%)";
+        resultText.value = "Detecting breed... (${(breedResult['confidence'] * 100).toInt()}%)";
       }
 
-      // Clean up
       if (await tempFile.exists()) await tempFile.delete();
     } catch (e) {
       debugPrint("Error detecting breed: $e");
@@ -268,18 +262,13 @@ class HomeController extends GetxController {
           final uvIndex = uvPixelStride * (srcX ~/ 2) + uvRowStride * (srcY ~/ 2);
           final yIndex = srcY * image.planes[0].bytesPerRow + srcX;
 
-          if (yIndex < yPlane.length &&
-              uvIndex < uPlane.length &&
-              uvIndex < vPlane.length) {
+          if (yIndex < yPlane.length && uvIndex < uPlane.length && uvIndex < vPlane.length) {
             final yp = yPlane[yIndex];
             final up = uPlane[uvIndex];
             final vp = vPlane[uvIndex];
 
-            // Convert YUV -> RGB
             int r = (yp + vp * 1436 / 1024 - 179).clamp(0, 255).toInt();
-            int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91)
-                .clamp(0, 255)
-                .toInt();
+            int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91).clamp(0, 255).toInt();
             int b = (yp + up * 1814 / 1024 - 227).clamp(0, 255).toInt();
 
             imgImage.setPixelRgb(x, y, r, g, b);
@@ -293,18 +282,21 @@ class HomeController extends GetxController {
     return imgImage;
   }
 
+  // --- UPDATED: dialog that pauses detection while open; no camera restart ---
   void showCapturePopup(String mood) {
     final dog = dataController.currentDog.value;
-    if (dog == null) return;
+    if (dog == null) {
+      _pauseDetection = false;
+      _savePromptOpen = false;
+      return;
+    }
 
     final dateNow = DateTime.now();
     final infoController = TextEditingController(text: "");
 
     Get.dialog(
       Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         insetPadding: const EdgeInsets.all(20),
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -319,13 +311,13 @@ class HomeController extends GetxController {
                   children: [
                     const Text(
                       "Dog Detected",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
                     ),
                     GestureDetector(
-                      onTap: () => Get.back(),
+                      onTap: () async {
+                        Get.back();
+                        await _cancelAndResume(); // NEW: cleanly resume detection
+                      },
                       child: const Icon(Icons.close, color: Colors.black54),
                     ),
                   ],
@@ -348,46 +340,50 @@ class HomeController extends GetxController {
                   maxLines: 2,
                 ),
                 const SizedBox(height: 20),
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Color(0xFFE15C31),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () async {
+                          Get.back();
+                          await _cancelAndResume(); // NEW
+                        },
+                        child: const Text("Cancel"),
                       ),
                     ),
-                    onPressed: () async {
-                      dog.info = infoController.text;
-                      if (_saveToDatabase) {
-                        await _saveResult(mood, _detectedBreed ?? dog.type);
-                      }
-                      Get.back();
-                      // Restart camera
-                      await disposeCamera();
-                      isLoading.value = true;
-                      resultText.value = "Cleaning and preparing camera...";
-                      await _cleanBufferAndTemp();
-                      await initCamera(
-                        saveMode: _saveToDatabase,
-                        quickScan: _isQuickScan,
-                      );
-                      isLoading.value = false;
-                      resultText.value = "";
-                    },
-                    child: const Text(
-                      "Save",
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFE15C31),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: () async {
+                          dog.info = infoController.text;
+                          if (_saveToDatabase) {
+                            await _saveResult(mood, _detectedBreed ?? dog.type);
+                          }
+                          Get.back();
+                          await _resetAfterSave(); // NEW: no camera restart
+                        },
+                        child: const Text(
+                          "Save",
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                        ),
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ],
             ),
           ),
         ),
       ),
+      barrierDismissible: false, // NEW: force explicit Cancel/Save
     );
   }
 
@@ -429,9 +425,10 @@ class HomeController extends GetxController {
     try {
       await dataController.firebaseService.db
           .child('accounts/$userPhone/saves/${dog.id}')
-          .update({ saveId: saveData });
+          .update({saveId: saveData});
 
       print("FurBe saved scan: $saveData");
+
     } catch (e) {
       print("FurBe save failed for $saveId: $e");
       try {
@@ -443,6 +440,29 @@ class HomeController extends GetxController {
         print("Rollback failed for $saveId");
       }
     }
+  }
+
+  // --- NEW: resume logic without restarting camera stream ---
+  Future<void> _resetAfterSave() async {
+    // short cooldown prevents instant re-prompting on same scene
+    _cooldownUntil = DateTime.now().add(const Duration(seconds: 1));
+    await _cleanBufferAndTemp();
+
+    // allow a new save to happen again
+    _savePromptOpen = false;
+    _pauseDetection = false;
+    // keep _hasSaved true only as a marker; not used to block future prompts
+    resultText.value = "";
+  }
+
+  // --- NEW: cancel path mirrors save but without DB write ---
+  Future<void> _cancelAndResume() async {
+    _cooldownUntil = DateTime.now().add(const Duration(milliseconds: 800));
+    await _cleanBufferAndTemp();
+    _savePromptOpen = false;
+    _pauseDetection = false;
+    // do not set _hasSaved
+    resultText.value = "";
   }
 
   Future<void> startScan() async {
@@ -468,6 +488,15 @@ class HomeController extends GetxController {
     _lastFrameTime = now;
   }
 
+  void handleMemoryPressure() {
+    debugPrint('Memory pressure detected - reducing processing load');
+    _cleanBufferAndTemp();
+  }
+
+  void handleMemoryPressureEnd() {
+    debugPrint('Memory pressure relieved - resuming normal processing');
+  }
+
   Future<void> _cleanBufferAndTemp() async {
     try {
       final tempDir = await getTemporaryDirectory();
@@ -477,7 +506,11 @@ class HomeController extends GetxController {
         await for (final file in tempDir.list()) {
           if (file is File) {
             try {
-              await file.delete();
+              // We only remove files we created (simple guard by name prefix)
+              final name = file.uri.pathSegments.isNotEmpty ? file.uri.pathSegments.last : "";
+              if (name.startsWith('temp_breed_detection') || name.endsWith('.jpg') || name.endsWith('.png')) {
+                await file.delete();
+              }
             } catch (e) {
               failedFiles.add(file.path);
             }
@@ -485,6 +518,7 @@ class HomeController extends GetxController {
         }
       }
 
+      // Reset per-frame guards
       _isProcessing = false;
       _skipFrameCount = 0;
 
@@ -501,7 +535,7 @@ class HomeController extends GetxController {
         }
       }
 
-      await Future.delayed(const Duration(milliseconds: 200));
+      await Future.delayed(const Duration(milliseconds: 120));
     } catch (e) {
       debugPrint('Error cleaning buffer and temp: $e');
     }

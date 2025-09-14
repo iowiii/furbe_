@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/data_controller.dart';
 import '../../core/app_routes.dart';
+import 'privacy_policy_view.dart';
 
 class SettingsView extends StatelessWidget {
   const SettingsView({super.key});
@@ -22,54 +23,7 @@ class SettingsView extends StatelessWidget {
             leading: const Icon(Icons.privacy_tip_outlined),
             title: const Text('Data Privacy Protocol'),
             onTap: () {
-              Get.dialog(
-                AlertDialog(
-                  title: const Text("Data Privacy Protocol"),
-                  content: const SingleChildScrollView(
-                    child: Text(
-                      "This study strictly complies with Republic Act No. 10173, "
-                      "otherwise known as the Data Privacy Act of 2012 — "
-                      "“An Act Protecting Individual Personal Information in Information "
-                      "and Communications Systems in the Government and the Private Sector, "
-                      "Creating for this Purpose a National Privacy Commission, and for Other Purposes.”\n\n"
-                      "All personal information, including survey responses and contact details, "
-                      "will be anonymized and securely stored in encrypted databases. Only "
-                      "authorized researchers will have access, and participants may withdraw "
-                      "at any time.\n\n"
-                      "Any collected images that may capture human faces will be anonymized "
-                      "(blurred, cropped, or excluded) before analysis to protect identities.\n\n"
-                      "Regarding animal welfare, the study adheres to Republic Act No. 8485, "
-                      "otherwise known as the Animal Welfare Act of the Philippines. No invasive "
-                      "or harmful procedures will be used. Dogs will only be observed in their "
-                      "natural environment with owner consent and supervision.",
-                    ),
-                  ),
-                  actions: [
-                    Center(
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          backgroundColor:
-                              const Color(0xFFE15C31), // background color
-                          shape: RoundedRectangleBorder(
-                            borderRadius:
-                                BorderRadius.circular(12), // rounded corners
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 80, vertical: 12),
-                        ),
-                        onPressed: () => Get.back(),
-                        child: const Text(
-                          "Close",
-                          style: TextStyle(
-                            color: Colors.white, // text color
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
+              Get.to(() => const PrivacyPolicyView()); // navigate to the scrollable page
             },
           ),
           ListTile(
@@ -658,16 +612,14 @@ class AccountInfoPage extends StatelessWidget {
                               return;
                             }
 
-                            if (phone != null) {
-                              await auth.firebaseService.db
-                                  .child('accounts')
-                                  .child(phone)
-                                  .remove();
-                              await auth.logout();
-                              Get.back();
-                              Get.snackbar(
-                                  "Success", "Account deleted successfully");
-                            }
+                            await auth.firebaseService.db
+                                .child('accounts')
+                                .child(phone)
+                                .remove();
+                            await auth.logout();
+                            Get.back();
+                            Get.snackbar(
+                                "Success", "Account deleted successfully");
                           },
                           child: const Text("Delete",
                               style:

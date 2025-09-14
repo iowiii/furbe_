@@ -5,6 +5,7 @@ import '../../controllers/data_controller.dart';
 import '../../controllers/home_controller.dart';
 import 'package:camera/camera.dart';
 import '../../controllers/main_controller.dart';
+import '../../widgets/performance_metrics_overlay.dart';
 
 class HomeView extends StatelessWidget {
   const HomeView({super.key});
@@ -98,7 +99,7 @@ class HomeView extends StatelessWidget {
             Obx(() {
               final currentDog = Get.find<DataController>().currentDog.value;
               final hasRegisteredDog = currentDog != null;
-              
+
               return ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: hasRegisteredDog ? const Color(0xFFE15C31) : Colors.grey,
@@ -179,10 +180,24 @@ class StartScanPage extends StatefulWidget {
 class _StartScanPageState extends State<StartScanPage> {
   final HomeController c = Get.find<HomeController>();
   final DataController dataCtrl = Get.find<DataController>();
+  late final PerfMetricsController perf;
 
   @override
   void initState() {
     super.initState();
+
+    if (!Get.isRegistered<PerfMetricsController>()) {
+      Get.put(PerfMetricsController(), permanent: true);
+    }
+    perf = Get.find<PerfMetricsController>();
+    
+    // Setup memory pressure callbacks
+    perf.onMemoryPressure = () {
+      c.handleMemoryPressure();
+    };
+    perf.onMemoryPressureEnd = () {
+      c.handleMemoryPressureEnd();
+    };
 
     final args = Get.arguments as Map<String, dynamic>?;
     final saveMode = args?['autoSave'] ?? false;
@@ -233,21 +248,7 @@ class _StartScanPageState extends State<StartScanPage> {
               Positioned(
                 top: 16,
                 right: 16,
-                child: Obx(() => Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    c.fpsText.value,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                )),
+                child: PerformanceMetricsOverlay(),
               ),
             ],
           );

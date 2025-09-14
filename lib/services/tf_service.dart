@@ -50,30 +50,17 @@ class TFLiteService {
   Future<List<TFLiteResult>> processCameraImageForMood(CameraImage image) async {
     if (_moodInterpreter == null) return [];
 
-    // Skip frames for better FPS
+    // Skip frames for better FPS and memory management
     _frameCount++;
     if (_frameCount % _skipFrames != 0) return [];
 
     try {
-      final img.Image rgbImage = _yuv420ToImage(image);
+      // Optimize image processing for memory
+      final img.Image rgbImage = _yuv420ToImageOptimized(image);
       final img.Image resized = img.copyResize(rgbImage, width: 224, height: 224);
 
-      // Create 4D input tensor [1, 224, 224, 3]
-      final input = List.generate(1, (_) =>
-          List.generate(224, (y) =>
-              List.generate(224, (x) =>
-                  List.generate(3, (c) {
-                    final pixel = resized.getPixel(x, y);
-                    switch (c) {
-                      case 0: return pixel.r / 255.0;
-                      case 1: return pixel.g / 255.0;
-                      case 2: return pixel.b / 255.0;
-                      default: return 0.0;
-                    }
-                  })
-              )
-          )
-      );
+      // Create 4D input tensor [1, 224, 224, 3] with memory optimization
+      final input = _createOptimizedInput(resized);
 
       // Create 2D output tensor [1, 4] for mood classes
       final output = List.generate(1, (_) => List.filled(4, 0.0));
@@ -140,9 +127,22 @@ class TFLiteService {
     }
   }
 
-  img.Image _yuv420ToImage(CameraImage image) {
-    final width = image.width;
-    final height = image.height;
+  List<List<List<List<double>>>> _createOptimizedInput(img.Image resized) {
+    return List.generate(1, (_) =>
+        List.generate(224, (y) =>
+            List.generate(224, (x) {
+              final pixel = resized.getPixel(x, y);
+              return [pixel.r / 255.0, pixel.g / 255.0, pixel.b / 255.0];
+            })
+        )
+    );
+  }
+
+  img.Image _yuv420ToImageOptimized(CameraImage image) {
+    // Reduce image size for memory optimization
+    final maxDim = 320;
+    final width = image.width > maxDim ? maxDim : image.width;
+    final height = image.height > maxDim ? maxDim : image.height;
     final imgImage = img.Image(width: width, height: height);
 
     final yPlane = image.planes[0].bytes;
@@ -151,22 +151,32 @@ class TFLiteService {
 
     final uvRowStride = image.planes[1].bytesPerRow;
     final uvPixelStride = image.planes[1].bytesPerPixel!;
+    
+    final scaleX = image.width / width;
+    final scaleY = image.height / height;
 
     for (int y = 0; y < height; y++) {
       for (int x = 0; x < width; x++) {
-        final uvIndex = uvPixelStride * (x ~/ 2) + uvRowStride * (y ~/ 2);
-        final yp = yPlane[y * image.planes[0].bytesPerRow + x];
-        final up = uPlane[uvIndex];
-        final vp = vPlane[uvIndex];
+        final srcX = (x * scaleX).toInt();
+        final srcY = (y * scaleY).toInt();
+        
+        final uvIndex = uvPixelStride * (srcX ~/ 2) + uvRowStride * (srcY ~/ 2);
+        final yIndex = srcY * image.planes[0].bytesPerRow + srcX;
+        
+        if (yIndex < yPlane.length && uvIndex < uPlane.length && uvIndex < vPlane.length) {
+          final yp = yPlane[yIndex];
+          final up = uPlane[uvIndex];
+          final vp = vPlane[uvIndex];
 
-        // Convert YUV -> RGB
-        int r = (yp + vp * 1436 / 1024 - 179).clamp(0, 255).toInt();
-        int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91)
-            .clamp(0, 255)
-            .toInt();
-        int b = (yp + up * 1814 / 1024 - 227).clamp(0, 255).toInt();
+          // Convert YUV -> RGB
+          int r = (yp + vp * 1436 / 1024 - 179).clamp(0, 255).toInt();
+          int g = (yp - up * 46549 / 131072 + 44 - vp * 93604 / 131072 + 91)
+              .clamp(0, 255)
+              .toInt();
+          int b = (yp + up * 1814 / 1024 - 227).clamp(0, 255).toInt();
 
-        imgImage.setPixelRgb(x, y, r, g, b);
+          imgImage.setPixelRgb(x, y, r, g, b);
+        }
       }
     }
 

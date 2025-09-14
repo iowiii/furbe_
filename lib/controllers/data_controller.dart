@@ -64,6 +64,32 @@ class DataController extends GetxController {
     }
   }
 
+  void _saveCredentials(String phone, String password) {
+    storage.write('savedPhone', phone);
+    storage.write('savedPassword', password);
+  }
+
+  void _clearCredentials() {
+    storage.remove('savedPhone');
+    storage.remove('savedPassword');
+  }
+
+  Future<bool> tryAutoLogin() async {
+    final savedPhone = storage.read('savedPhone');
+    final savedPassword = storage.read('savedPassword');
+    
+    if (savedPhone != null && savedPassword != null) {
+      try {
+        await login(savedPhone, savedPassword);
+        return true;
+      } catch (e) {
+        _clearCredentials();
+        return false;
+      }
+    }
+    return false;
+  }
+
   void _loadSession() {
     final userData = storage.read('user');
     final dogId = storage.read('currentDogId');
@@ -144,6 +170,7 @@ class DataController extends GetxController {
       await loadAppUser(phone);
       user.value = null;
       _saveSession();
+      _saveCredentials(phone, password);
       Get.offAllNamed(AppRoutes.main);
       return;
     }
@@ -307,6 +334,8 @@ class DataController extends GetxController {
     appUser.value = null;
     currentPhone = null;
     currentDog.value = null;
+    _clearCredentials();
+    storage.erase();
     print("Logged out");
     Get.offAllNamed(AppRoutes.login);
   }
